@@ -41,6 +41,8 @@ public sealed partial class RivalController : CharacterBody3D
     private Vector3 _lastKnownPosition;
     private bool _hasLastKnownPosition;
     private double _nextDecisionTime;
+    private Vector3 _spawnPosition;
+    private Vector3 _spawnRotation;
 
     public EnemyAwareness Awareness => _perception.Awareness;
 
@@ -56,6 +58,8 @@ public sealed partial class RivalController : CharacterBody3D
         _hud = GetTree().GetFirstNodeInGroup("hud") as HudController;
         _combatant.Damaged += OnDamaged;
         _combatant.Defeated += OnDefeated;
+        _spawnPosition = GlobalPosition;
+        _spawnRotation = Rotation;
     }
 
     public override void _ExitTree()
@@ -139,6 +143,18 @@ public sealed partial class RivalController : CharacterBody3D
         {
             _visual.Rotation = Vector3.Zero;
         }
+    }
+
+    public void RestorePersistentState(int currentHealth)
+    {
+        ResetCombat(_spawnPosition, _spawnRotation);
+        _combatant?.RestoreCurrent(currentHealth);
+        if (currentHealth == 0 && _visual is not null)
+        {
+            _visual.Rotation = new Vector3(0.0f, 0.0f, Mathf.Pi * 0.5f);
+        }
+
+        UpdateHud();
     }
 
     private bool EvaluateTargetVisibility()

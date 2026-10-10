@@ -39,6 +39,8 @@ public sealed partial class EconomyController : Node
 
     public void ResetEconomy() => Economy.RestoreBalance(StartingMoney);
 
+    public void RestoreBalance(int balance) => Economy.RestoreBalance(balance);
+
     private void OnBalanceChanged(int previous, int current) => UpdateHud();
 
     private void UpdateHud()

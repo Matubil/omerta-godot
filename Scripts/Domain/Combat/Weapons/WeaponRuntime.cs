@@ -95,6 +95,26 @@ public sealed class WeaponRuntime
         Changed?.Invoke();
     }
 
+    public void Restore(int magazineAmmo, int reserveAmmo)
+    {
+        if (magazineAmmo < 0 || magazineAmmo > Specification.MagazineCapacity)
+        {
+            throw new ArgumentOutOfRangeException(nameof(magazineAmmo));
+        }
+
+        if (reserveAmmo < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(reserveAmmo));
+        }
+
+        AmmoInMagazine = magazineAmmo;
+        ReserveAmmo = reserveAmmo;
+        IsReloading = false;
+        _nextAllowedFireTime = 0;
+        _reloadCompletionTime = 0;
+        Changed?.Invoke();
+    }
+
     private static void ValidateTime(double currentTime)
     {
         if (currentTime < 0 || double.IsNaN(currentTime))

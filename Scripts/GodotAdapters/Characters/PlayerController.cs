@@ -143,6 +143,20 @@ public sealed partial class PlayerController : CharacterBody3D
         }
     }
 
+    public void RestorePersistentPose(Vector3 position, Quaternion rotation)
+    {
+        Velocity = Vector3.Zero;
+        _isAiming = false;
+        if (_isCrouched)
+        {
+            _isCrouched = false;
+            ApplyStanceDimensions();
+            _cameraRig?.SetCrouched(false);
+        }
+
+        GlobalTransform = new Transform3D(new Basis(rotation.Normalized()), position);
+    }
+
     private Vector3 GetCameraRelativeDirection(Vector2 input)
     {
         if (_camera is null)

@@ -58,6 +58,9 @@ public sealed partial class HitscanWeaponController : Node
 
     public void ResetRuntime() => Runtime.Reset();
 
+    public void RestoreRuntime(int magazineAmmo, int reserveAmmo) =>
+        Runtime.Restore(magazineAmmo, reserveAmmo);
+
     private double CurrentTime => Time.GetTicksMsec() / 1000.0;
 
     private Vector3 ApplySpread(Vector3 direction, float spreadDegrees)

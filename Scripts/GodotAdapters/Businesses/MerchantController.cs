@@ -37,6 +37,19 @@ public sealed partial class MerchantController : StaticBody3D
         _workshop ??= FindWorkshop();
     }
 
+    public int CurrentHealth => _combatant?.Health.Current ?? 0;
+
+    public void RestoreHealth(int currentHealth)
+    {
+        _combatant?.RestoreCurrent(currentHealth);
+        if (_visual is not null)
+        {
+            _visual.Rotation = currentHealth == 0
+                ? new Vector3(0.0f, 0.0f, Mathf.Pi * 0.5f)
+                : Vector3.Zero;
+        }
+    }
+
     private void OnDefeated(DamageInfo damage)
     {
         if (_visual is not null)

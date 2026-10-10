@@ -79,6 +79,14 @@ public sealed partial class PlayerCombatController : Node
         RefreshHud();
     }
 
+    public void RestoreCombat(int currentHealth, int magazineAmmo, int reserveAmmo)
+    {
+        _combatant?.RestoreCurrent(currentHealth);
+        _weapon?.RestoreRuntime(magazineAmmo, reserveAmmo);
+        SetAiming(false);
+        RefreshHud();
+    }
+
     private void SetAiming(bool aiming)
     {
         if (IsAiming == aiming)

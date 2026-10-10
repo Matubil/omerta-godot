@@ -56,6 +56,8 @@ public sealed partial class Combatant : Node, IDamageable
 
     public void RestoreToFull() => Health.RestoreToFull();
 
+    public void RestoreCurrent(int current) => Health.RestoreCurrent(current);
+
     public static Combatant? FindFromCollider(Node? collider)
     {
         Node? current = collider;

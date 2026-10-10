@@ -208,6 +208,28 @@ public sealed partial class WorkshopController : Node3D
         RefreshPresentation();
     }
 
+    public int MerchantHealth =>
+        GetNodeOrNull<MerchantController>("Interior/Merchant")?.CurrentHealth ?? 0;
+
+    public void RestorePersistentState(
+        string ownerFactionId,
+        bool criticalAssetOperational,
+        int merchantHealth,
+        bool defenderDefeated)
+    {
+        _suppressStatus = true;
+        Business.Capture(ownerFactionId);
+        Operations.Restore(merchantHealth > 0, criticalAssetOperational);
+        ForcedTakeover.SetDefenderDefeated(0, defenderDefeated);
+        Extortion.SynchronizeWithBusinessOwner();
+        _income?.ResetTiming();
+        GetNodeOrNull<MerchantController>("Interior/Merchant")?.RestoreHealth(merchantHealth);
+        GetNodeOrNull<PressurePropController>("Interior/MerchandiseA")?.ResetProp();
+        GetNodeOrNull<PressurePropController>("Interior/MerchandiseB")?.ResetProp();
+        _suppressStatus = false;
+        RefreshPresentation();
+    }
+
     private void ResolveRuntimeLinks()
     {
         _hud ??= GetTree().GetFirstNodeInGroup("hud") as HudController;

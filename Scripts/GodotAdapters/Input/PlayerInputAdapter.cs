@@ -14,6 +14,8 @@ public sealed partial class PlayerInputAdapter : Node
     private static readonly StringName Fire = "fire";
     private static readonly StringName Aim = "aim";
     private static readonly StringName Reload = "reload";
+    private static readonly StringName SaveGame = "save_game";
+    private static readonly StringName LoadGame = "load_game";
 
     [Export(PropertyHint.Range, "0.5,2.0,0.05")]
     public float PointerSensitivity { get; set; } = 1.0f;
@@ -37,6 +39,10 @@ public sealed partial class PlayerInputAdapter : Node
     public bool IsAiming => Godot.Input.IsActionPressed(Aim);
 
     public bool ReloadPressed => Godot.Input.IsActionJustPressed(Reload);
+
+    public bool SavePressed => Godot.Input.IsActionJustPressed(SaveGame);
+
+    public bool LoadPressed => Godot.Input.IsActionJustPressed(LoadGame);
 
     public Vector2 AimScreenPosition
     {

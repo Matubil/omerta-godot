@@ -12,5 +12,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\Scripts\Domain\**\*.cs" Link="Domain\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\..\Scripts\Infrastructure\Persistence\**\*.cs" Link="Infrastructure\Persistence\%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>
