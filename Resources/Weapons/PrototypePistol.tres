@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="WeaponDefinitionResource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/Combat/WeaponDefinitionResource.cs" id="1_weapon"]
+
+[resource]
+script = ExtResource("1_weapon")
+Id = "weapon.prototype-pistol"
+DisplayName = "Pistola semiautomática"
+Damage = 25
+FireIntervalSeconds = 0.35
+EffectiveRange = 30.0
+MagazineCapacity = 7
+ReloadDurationSeconds = 1.4
+HipFireSpreadDegrees = 3.5
+AimSpreadDegrees = 0.65

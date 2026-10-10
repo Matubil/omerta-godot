@@ -63,6 +63,47 @@ theme_override_colors/font_color = Color(0.72, 0.78, 0.8, 1)
 theme_override_font_sizes/font_size = 14
 text = "POSTURA: DE PIE"
 
+[node name="Health" type="Label" parent="."]
+offset_left = 24.0
+offset_top = 140.0
+offset_right = 320.0
+offset_bottom = 168.0
+theme_override_colors/font_color = Color(0.88, 0.92, 0.92, 1)
+theme_override_font_sizes/font_size = 16
+text = "SALUD  100/100"
+
+[node name="Weapon" type="Label" parent="."]
+offset_left = 24.0
+offset_top = 168.0
+offset_right = 420.0
+offset_bottom = 196.0
+theme_override_colors/font_color = Color(0.95, 0.82, 0.5, 1)
+theme_override_font_sizes/font_size = 16
+text = "PISTOLA SEMIAUTOMÁTICA  7 / 28"
+
+[node name="AimState" type="Label" parent="."]
+offset_left = 24.0
+offset_top = 196.0
+offset_right = 180.0
+offset_bottom = 222.0
+theme_override_colors/font_color = Color(0.65, 0.7, 0.72, 1)
+theme_override_font_sizes/font_size = 14
+text = "CADERA"
+
+[node name="EnemyState" type="Label" parent="."]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -390.0
+offset_top = 194.0
+offset_right = -22.0
+offset_bottom = 226.0
+grow_horizontal = 0
+theme_override_colors/font_color = Color(1, 0.45, 0.36, 1)
+theme_override_font_sizes/font_size = 16
+text = "RIVAL  100/100 · SIN ALERTA"
+horizontal_alignment = 2
+
 [node name="Help" type="Label" parent="."]
 anchors_preset = 1
 anchor_left = 1.0
@@ -70,11 +111,11 @@ anchor_right = 1.0
 offset_left = -310.0
 offset_top = 22.0
 offset_right = -22.0
-offset_bottom = 120.0
+offset_bottom = 154.0
 grow_horizontal = 0
 theme_override_colors/font_color = Color(0.72, 0.78, 0.8, 1)
 theme_override_font_sizes/font_size = 14
-text = "WASD  MOVER\nSHIFT  CORRER\nCTRL / C  AGACHARSE\nE  INTERACTUAR"
+text = "WASD  MOVER\nSHIFT  CORRER\nCTRL / C  AGACHARSE\nE  INTERACTUAR\nR  RECARGAR\nRMB  ADS · LMB  DISPARAR\nT  REINICIAR ENCUENTRO"
 horizontal_alignment = 2
 
 [node name="StatusMessage" type="Label" parent="."]

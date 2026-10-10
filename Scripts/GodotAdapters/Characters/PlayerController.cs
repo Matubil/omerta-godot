@@ -1,6 +1,8 @@
 using Godot;
 using Omerta.GodotAdapters.Camera;
+using Omerta.GodotAdapters.Combat;
 using Omerta.GodotAdapters.Input;
+using Omerta.GodotAdapters.World;
 using Omerta.Presentation;
 
 namespace Omerta.GodotAdapters.Characters;
@@ -15,6 +17,9 @@ public sealed partial class PlayerController : CharacterBody3D
 
     [Export]
     public float CrouchMultiplier { get; set; } = 0.55f;
+
+    [Export]
+    public float AimMovementMultiplier { get; set; } = 0.65f;
 
     [Export]
     public float RotationSpeed { get; set; } = 12.0f;
@@ -36,7 +41,10 @@ public sealed partial class PlayerController : CharacterBody3D
     private Node3D? _visual;
     private RayCast3D? _standingClearance;
     private HudController? _hud;
+    private Combatant? _combatant;
+    private WorldCursorProjector? _cursor;
     private bool _isCrouched;
+    private bool _isAiming;
 
     public bool IsCrouched => _isCrouched;
 
@@ -51,6 +59,7 @@ public sealed partial class PlayerController : CharacterBody3D
         _capsule = _collision.Shape as CapsuleShape3D;
         _visual = GetNode<Node3D>("Visual");
         _standingClearance = GetNode<RayCast3D>("StandingClearance");
+        _combatant = GetNodeOrNull<Combatant>("Combatant");
         ApplyStanceDimensions();
     }
 
@@ -59,6 +68,12 @@ public sealed partial class PlayerController : CharacterBody3D
         ResolveDependencies();
         if (_input is null)
         {
+            return;
+        }
+
+        if (_combatant?.IsDefeated == true)
+        {
+            Velocity = Vector3.Zero;
             return;
         }
 
@@ -72,7 +87,8 @@ public sealed partial class PlayerController : CharacterBody3D
         bool isSprinting = _input.IsSprinting && !_isCrouched && moveDirection.LengthSquared() > 0.001f;
         float stanceMultiplier = _isCrouched ? CrouchMultiplier : 1.0f;
         float sprintMultiplier = isSprinting ? SprintMultiplier : 1.0f;
-        float speed = MovementSpeed * stanceMultiplier * sprintMultiplier;
+        float aimMultiplier = _isAiming ? AimMovementMultiplier : 1.0f;
+        float speed = MovementSpeed * stanceMultiplier * sprintMultiplier * aimMultiplier;
 
         Vector3 velocity = Velocity;
         velocity.X = moveDirection.X * speed;
@@ -80,9 +96,16 @@ public sealed partial class PlayerController : CharacterBody3D
         velocity.Y = IsOnFloor() ? -0.5f : velocity.Y - Gravity * (float)delta;
         Velocity = velocity;
 
-        if (moveDirection.LengthSquared() > 0.001f && _visual is not null)
+        Vector3 facingDirection = moveDirection;
+        if (_isAiming && _cursor?.HasAimPoint == true)
         {
-            float targetYaw = Mathf.Atan2(moveDirection.X, moveDirection.Z);
+            facingDirection = _cursor.AimPoint - GlobalPosition;
+            facingDirection.Y = 0.0f;
+        }
+
+        if (facingDirection.LengthSquared() > 0.001f && _visual is not null)
+        {
+            float targetYaw = Mathf.Atan2(facingDirection.X, facingDirection.Z);
             Vector3 rotation = _visual.Rotation;
             rotation.Y = Mathf.LerpAngle(
                 rotation.Y,
@@ -101,6 +124,23 @@ public sealed partial class PlayerController : CharacterBody3D
         _cameraRig ??= GetTree().GetFirstNodeInGroup("camera_rig") as IsometricCameraController;
         _camera ??= GetTree().GetFirstNodeInGroup("game_camera") as Camera3D;
         _hud ??= GetTree().GetFirstNodeInGroup("hud") as HudController;
+        _cursor ??= GetTree().GetFirstNodeInGroup("world_cursor") as WorldCursorProjector;
+    }
+
+    public void SetAiming(bool aiming) => _isAiming = aiming;
+
+    public void ResetForEncounter(Vector3 position, Vector3 rotation)
+    {
+        GlobalPosition = position;
+        Rotation = rotation;
+        Velocity = Vector3.Zero;
+        _isAiming = false;
+        if (_isCrouched)
+        {
+            _isCrouched = false;
+            ApplyStanceDimensions();
+            _cameraRig?.SetCrouched(false);
+        }
     }
 
     private Vector3 GetCameraRelativeDirection(Vector2 input)

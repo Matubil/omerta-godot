@@ -11,6 +11,9 @@ public sealed partial class PlayerInputAdapter : Node
     private static readonly StringName Sprint = "sprint";
     private static readonly StringName Crouch = "crouch";
     private static readonly StringName Interact = "interact";
+    private static readonly StringName Fire = "fire";
+    private static readonly StringName Aim = "aim";
+    private static readonly StringName Reload = "reload";
 
     [Export(PropertyHint.Range, "0.5,2.0,0.05")]
     public float PointerSensitivity { get; set; } = 1.0f;
@@ -28,6 +31,12 @@ public sealed partial class PlayerInputAdapter : Node
     public bool CrouchPressed => Godot.Input.IsActionJustPressed(Crouch);
 
     public bool InteractPressed => Godot.Input.IsActionJustPressed(Interact);
+
+    public bool FirePressed => Godot.Input.IsActionJustPressed(Fire);
+
+    public bool IsAiming => Godot.Input.IsActionPressed(Aim);
+
+    public bool ReloadPressed => Godot.Input.IsActionJustPressed(Reload);
 
     public Vector2 AimScreenPosition
     {

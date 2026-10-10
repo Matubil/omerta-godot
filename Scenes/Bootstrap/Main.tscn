@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/GameBootstrap.cs" id="1_bootstrap"]
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/Input/PlayerInputAdapter.cs" id="2_input"]
@@ -8,6 +8,7 @@
 [ext_resource type="PackedScene" path="res://Scenes/Characters/Player.tscn" id="6_player"]
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/World/WorldCursorProjector.cs" id="7_cursor"]
 [ext_resource type="PackedScene" path="res://Scenes/UI/Hud.tscn" id="8_hud"]
+[ext_resource type="PackedScene" path="res://Scenes/Characters/Rival.tscn" id="9_rival"]
 
 [sub_resource type="Environment" id="Environment_main"]
 background_mode = 1
@@ -51,6 +52,10 @@ script = ExtResource("2_input")
 [node name="Player" parent="." instance=ExtResource("6_player")]
 position = Vector3(0, 0.05, 4)
 
+[node name="Rival" parent="." instance=ExtResource("9_rival")]
+position = Vector3(5, 0.05, -3)
+rotation_degrees = Vector3(0, 145, 0)
+
 [node name="CameraRig" type="Node3D" parent="." groups=["camera_rig"]]
 script = ExtResource("3_camera")
 
@@ -60,7 +65,7 @@ fov = 50.0
 near = 0.1
 far = 250.0
 
-[node name="WorldCursor" type="Node3D" parent="."]
+[node name="WorldCursor" type="Node3D" parent="." groups=["world_cursor"]]
 script = ExtResource("7_cursor")
 
 [node name="Mesh" type="MeshInstance3D" parent="WorldCursor"]

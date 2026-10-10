@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="Omerta.csproj" />
+  <Project Path="Tests/Omerta.Domain.Tests/Omerta.Domain.Tests.csproj" />
 </Solution>
