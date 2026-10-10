@@ -90,6 +90,29 @@ theme_override_colors/font_color = Color(0.65, 0.7, 0.72, 1)
 theme_override_font_sizes/font_size = 14
 text = "CADERA"
 
+[node name="Economy" type="Label" parent="."]
+offset_left = 24.0
+offset_top = 224.0
+offset_right = 320.0
+offset_bottom = 252.0
+theme_override_colors/font_color = Color(0.55, 0.94, 0.6, 1)
+theme_override_font_sizes/font_size = 16
+text = "FONDOS  $100"
+
+[node name="BusinessState" type="Label" parent="."]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -450.0
+offset_top = 236.0
+offset_right = -22.0
+offset_bottom = 316.0
+grow_horizontal = 0
+theme_override_colors/font_color = Color(0.93, 0.76, 0.36, 1)
+theme_override_font_sizes/font_size = 15
+text = "TALLER EL FARO\nDUEÑO: CÍRCULO FERRO · OPERATIVO\nPRESIÓN: 0/100"
+horizontal_alignment = 2
+
 [node name="EnemyState" type="Label" parent="."]
 anchors_preset = 1
 anchor_left = 1.0

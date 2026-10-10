@@ -11,6 +11,6 @@
     <PackageReference Include="NUnit3TestAdapter" Version="5.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\..\Scripts\Domain\Combat\**\*.cs" Link="Domain\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\..\Scripts\Domain\**\*.cs" Link="Domain\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

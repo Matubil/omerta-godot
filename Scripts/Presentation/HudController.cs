@@ -12,6 +12,8 @@ public sealed partial class HudController : CanvasLayer
     private Label? _weaponLabel;
     private Label? _enemyLabel;
     private Label? _aimLabel;
+    private Label? _economyLabel;
+    private Label? _businessLabel;
     private float _statusRemaining;
 
     public override void _Ready()
@@ -24,6 +26,8 @@ public sealed partial class HudController : CanvasLayer
         _weaponLabel = GetNode<Label>("Weapon");
         _enemyLabel = GetNode<Label>("EnemyState");
         _aimLabel = GetNode<Label>("AimState");
+        _economyLabel = GetNode<Label>("Economy");
+        _businessLabel = GetNode<Label>("BusinessState");
     }
 
     public override void _Process(double delta)
@@ -94,6 +98,28 @@ public sealed partial class HudController : CanvasLayer
         if (_aimLabel is not null)
         {
             _aimLabel.Text = aiming ? "ADS" : "CADERA";
+        }
+    }
+
+    public void SetEconomy(int balance)
+    {
+        if (_economyLabel is not null)
+        {
+            _economyLabel.Text = $"FONDOS  ${balance}";
+        }
+    }
+
+    public void SetBusiness(
+        string displayName,
+        string owner,
+        string operation,
+        int pressure,
+        int resistance)
+    {
+        if (_businessLabel is not null)
+        {
+            _businessLabel.Text =
+                $"{displayName.ToUpperInvariant()}\nDUEÑO: {owner} · {operation}\nPRESIÓN: {pressure}/{resistance}";
         }
     }
 

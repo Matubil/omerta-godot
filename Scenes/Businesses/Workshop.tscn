@@ -1,7 +1,13 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=23 format=3]
 
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/Interaction/MerchantInteraction.cs" id="1_merchant"]
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/Interaction/PortalInteraction.cs" id="2_portal"]
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/Businesses/WorkshopController.cs" id="3_workshop"]
+[ext_resource type="Resource" path="res://Resources/Businesses/WorkshopElFaro.tres" id="4_definition"]
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/Businesses/MerchantController.cs" id="5_merchant_controller"]
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/Combat/Combatant.cs" id="6_combatant"]
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/Interaction/BusinessOperationsInteraction.cs" id="7_operations"]
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/Businesses/PressurePropController.cs" id="8_pressure_prop"]
 
 [sub_resource type="StandardMaterial3D" id="WallMaterial"]
 albedo_color = Color(0.48, 0.36, 0.22, 1)
@@ -19,6 +25,15 @@ emission = Color(0.03, 0.11, 0.22, 1)
 [sub_resource type="StandardMaterial3D" id="MerchantMaterial"]
 albedo_color = Color(0.58, 0.24, 0.16, 1)
 roughness = 0.8
+
+[sub_resource type="StandardMaterial3D" id="OperationsMaterial"]
+albedo_color = Color(0.12, 0.5, 0.25, 1)
+emission_enabled = true
+emission = Color(0.02, 0.18, 0.06, 1)
+
+[sub_resource type="StandardMaterial3D" id="MerchandiseMaterial"]
+albedo_color = Color(0.72, 0.48, 0.16, 1)
+roughness = 0.9
 
 [sub_resource type="BoxMesh" id="UnitWallMesh"]
 material = SubResource("WallMaterial")
@@ -40,11 +55,28 @@ material = SubResource("MerchantMaterial")
 radius = 0.38
 height = 1.75
 
+[sub_resource type="BoxMesh" id="OperationsMesh"]
+material = SubResource("OperationsMaterial")
+size = Vector3(1.2, 1.0, 0.7)
+
+[sub_resource type="BoxMesh" id="MerchandiseMesh"]
+material = SubResource("MerchandiseMaterial")
+size = Vector3(1.1, 1.0, 1.1)
+
 [sub_resource type="CylinderShape3D" id="InteractionShape"]
 height = 2.2
 radius = 0.65
 
+[sub_resource type="CapsuleShape3D" id="MerchantShape"]
+radius = 0.38
+height = 1.75
+
+[sub_resource type="BoxShape3D" id="MerchandiseShape"]
+size = Vector3(1.1, 1.0, 1.1)
+
 [node name="Workshop" type="Node3D"]
+script = ExtResource("3_workshop")
+Definition = ExtResource("4_definition")
 
 [node name="Exterior" type="Node3D" parent="."]
 
@@ -178,20 +210,119 @@ mesh = SubResource("UnitWallMesh")
 [node name="Collision" type="CollisionShape3D" parent="Interior/RightWall"]
 shape = SubResource("UnitBoxShape")
 
-[node name="Merchant" type="Area3D" parent="Interior"]
-position = Vector3(0, 0.9, -1.5)
+[node name="Merchant" type="StaticBody3D" parent="Interior"]
+position = Vector3(0, 0, -1.5)
+collision_layer = 1
+collision_mask = 1
+script = ExtResource("5_merchant_controller")
+
+[node name="Visual" type="Node3D" parent="Interior/Merchant"]
+position = Vector3(0, 0.9, 0)
+
+[node name="Body" type="MeshInstance3D" parent="Interior/Merchant/Visual"]
+mesh = SubResource("MerchantMesh")
+
+[node name="Collision" type="CollisionShape3D" parent="Interior/Merchant"]
+position = Vector3(0, 0.9, 0)
+shape = SubResource("MerchantShape")
+
+[node name="Combatant" type="Node" parent="Interior/Merchant"]
+script = ExtResource("6_combatant")
+CombatantId = "character.rafael-merchant"
+MaximumHealth = 50
+
+[node name="Interaction" type="Area3D" parent="Interior/Merchant"]
+position = Vector3(0, 1.0, 0)
 collision_layer = 2
 collision_mask = 0
 monitorable = true
 script = ExtResource("1_merchant")
-MerchantName = "Rafael, comerciante"
-Greeting = "El Faro sigue trabajando. Si venís a hablar, hablamos."
 
-[node name="Visual" type="MeshInstance3D" parent="Interior/Merchant"]
-mesh = SubResource("MerchantMesh")
-
-[node name="Collision" type="CollisionShape3D" parent="Interior/Merchant"]
+[node name="Collision" type="CollisionShape3D" parent="Interior/Merchant/Interaction"]
 shape = SubResource("InteractionShape")
+
+[node name="Label" type="Label3D" parent="Interior/Merchant"]
+position = Vector3(0, 2.15, 0)
+modulate = Color(1, 0.72, 0.45, 1)
+text = "RAFAEL · COMERCIANTE"
+font_size = 34
+outline_size = 8
+billboard = 1
+
+[node name="OperationsPoint" type="Area3D" parent="Interior"]
+position = Vector3(-2.8, 0.65, -3.2)
+collision_layer = 2
+collision_mask = 0
+monitorable = true
+script = ExtResource("7_operations")
+
+[node name="Visual" type="MeshInstance3D" parent="Interior/OperationsPoint"]
+mesh = SubResource("OperationsMesh")
+
+[node name="Collision" type="CollisionShape3D" parent="Interior/OperationsPoint"]
+shape = SubResource("InteractionShape")
+
+[node name="Label" type="Label3D" parent="Interior/OperationsPoint"]
+position = Vector3(0, 1.15, 0)
+modulate = Color(0.55, 1, 0.58, 1)
+text = "PUNTO OPERATIVO"
+font_size = 28
+outline_size = 7
+billboard = 1
+
+[node name="MerchandiseA" type="StaticBody3D" parent="Interior"]
+position = Vector3(2.5, 0.5, -3.25)
+collision_layer = 1
+collision_mask = 1
+script = ExtResource("8_pressure_prop")
+
+[node name="Visual" type="Node3D" parent="Interior/MerchandiseA"]
+
+[node name="Mesh" type="MeshInstance3D" parent="Interior/MerchandiseA/Visual"]
+mesh = SubResource("MerchandiseMesh")
+
+[node name="Collision" type="CollisionShape3D" parent="Interior/MerchandiseA"]
+shape = SubResource("MerchandiseShape")
+
+[node name="Combatant" type="Node" parent="Interior/MerchandiseA"]
+script = ExtResource("6_combatant")
+CombatantId = "prop.el-faro.merchandise-a"
+MaximumHealth = 25
+
+[node name="Label" type="Label3D" parent="Interior/MerchandiseA"]
+position = Vector3(0, 1.0, 0)
+modulate = Color(1, 0.72, 0.3, 1)
+text = "MERCADERÍA"
+font_size = 24
+outline_size = 6
+billboard = 1
+
+[node name="MerchandiseB" type="StaticBody3D" parent="Interior"]
+position = Vector3(3.7, 0.5, -1.8)
+collision_layer = 1
+collision_mask = 1
+script = ExtResource("8_pressure_prop")
+
+[node name="Visual" type="Node3D" parent="Interior/MerchandiseB"]
+
+[node name="Mesh" type="MeshInstance3D" parent="Interior/MerchandiseB/Visual"]
+mesh = SubResource("MerchandiseMesh")
+
+[node name="Collision" type="CollisionShape3D" parent="Interior/MerchandiseB"]
+shape = SubResource("MerchandiseShape")
+
+[node name="Combatant" type="Node" parent="Interior/MerchandiseB"]
+script = ExtResource("6_combatant")
+CombatantId = "prop.el-faro.merchandise-b"
+MaximumHealth = 25
+
+[node name="Label" type="Label3D" parent="Interior/MerchandiseB"]
+position = Vector3(0, 1.0, 0)
+modulate = Color(1, 0.72, 0.3, 1)
+text = "MERCADERÍA"
+font_size = 24
+outline_size = 6
+billboard = 1
 
 [node name="Exit" type="Area3D" parent="Interior"]
 position = Vector3(0, 1.1, 4.8)

@@ -22,14 +22,11 @@ public sealed partial class PlayerInteractor : Node
     {
         ResolveDependencies();
         IInteractable? nearest = FindNearestInteractable();
-        if (!ReferenceEquals(nearest, _current))
-        {
-            _current = nearest;
-            _hud?.SetInteractionPrompt(
-                _current is not null && _current.CanInteract
-                    ? $"[E] {_current.InteractionPrompt}"
-                    : string.Empty);
-        }
+        _current = nearest;
+        _hud?.SetInteractionPrompt(
+            _current is not null && _current.CanInteract
+                ? $"[E] {_current.InteractionPrompt}"
+                : string.Empty);
 
         if (_input?.InteractPressed == true && _current?.CanInteract == true)
         {

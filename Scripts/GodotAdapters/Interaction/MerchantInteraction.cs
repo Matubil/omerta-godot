@@ -1,24 +1,33 @@
 using Godot;
 using Omerta.Application.Interaction;
-using Omerta.Presentation;
+using Omerta.GodotAdapters.Businesses;
 
 namespace Omerta.GodotAdapters.Interaction;
 
 public sealed partial class MerchantInteraction : Area3D, IInteractable
 {
-    [Export]
-    public string MerchantName { get; set; } = "Comerciante";
+    private WorkshopController? _workshop;
 
-    [Export(PropertyHint.MultilineText)]
-    public string Greeting { get; set; } = "El taller está abierto, pero no busco problemas.";
+    public bool CanInteract => ResolveWorkshop()?.CanInteractWithMerchant == true;
 
-    public bool CanInteract => true;
+    public string InteractionPrompt => ResolveWorkshop()?.MerchantPrompt ?? string.Empty;
 
-    public string InteractionPrompt => $"Hablar con {MerchantName}";
+    public void Interact() => ResolveWorkshop()?.InteractWithMerchant();
 
-    public void Interact()
+    private WorkshopController? ResolveWorkshop()
     {
-        HudController? hud = GetTree().GetFirstNodeInGroup("hud") as HudController;
-        hud?.ShowStatus($"{MerchantName}: «{Greeting}»", 4.0f);
+        if (_workshop is not null)
+        {
+            return _workshop;
+        }
+
+        Node? current = GetParent();
+        while (current is not null && current is not WorkshopController)
+        {
+            current = current.GetParent();
+        }
+
+        _workshop = current as WorkshopController;
+        return _workshop;
     }
 }

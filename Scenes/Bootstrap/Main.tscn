@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/GameBootstrap.cs" id="1_bootstrap"]
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/Input/PlayerInputAdapter.cs" id="2_input"]
@@ -9,6 +9,7 @@
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/World/WorldCursorProjector.cs" id="7_cursor"]
 [ext_resource type="PackedScene" path="res://Scenes/UI/Hud.tscn" id="8_hud"]
 [ext_resource type="PackedScene" path="res://Scenes/Characters/Rival.tscn" id="9_rival"]
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/Economy/EconomyController.cs" id="10_economy"]
 
 [sub_resource type="Environment" id="Environment_main"]
 background_mode = 1
@@ -44,6 +45,10 @@ shadow_enabled = true
 
 [node name="PlayerInput" type="Node" parent="." groups=["player_input"]]
 script = ExtResource("2_input")
+
+[node name="Economy" type="Node" parent="." groups=["economy"]]
+script = ExtResource("10_economy")
+StartingMoney = 100
 
 [node name="CityBlock" parent="." instance=ExtResource("4_world")]
 
