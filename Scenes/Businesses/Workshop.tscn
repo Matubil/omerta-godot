@@ -1,0 +1,211 @@
+[gd_scene load_steps=13 format=3]
+
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/Interaction/MerchantInteraction.cs" id="1_merchant"]
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/Interaction/PortalInteraction.cs" id="2_portal"]
+
+[sub_resource type="StandardMaterial3D" id="WallMaterial"]
+albedo_color = Color(0.48, 0.36, 0.22, 1)
+roughness = 0.92
+
+[sub_resource type="StandardMaterial3D" id="FloorMaterial"]
+albedo_color = Color(0.25, 0.27, 0.25, 1)
+roughness = 1.0
+
+[sub_resource type="StandardMaterial3D" id="DoorMaterial"]
+albedo_color = Color(0.08, 0.32, 0.58, 1)
+emission_enabled = true
+emission = Color(0.03, 0.11, 0.22, 1)
+
+[sub_resource type="StandardMaterial3D" id="MerchantMaterial"]
+albedo_color = Color(0.58, 0.24, 0.16, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="UnitWallMesh"]
+material = SubResource("WallMaterial")
+size = Vector3(1, 1, 1)
+
+[sub_resource type="BoxMesh" id="UnitFloorMesh"]
+material = SubResource("FloorMaterial")
+size = Vector3(1, 1, 1)
+
+[sub_resource type="BoxMesh" id="UnitDoorMesh"]
+material = SubResource("DoorMaterial")
+size = Vector3(1, 1, 1)
+
+[sub_resource type="BoxShape3D" id="UnitBoxShape"]
+size = Vector3(1, 1, 1)
+
+[sub_resource type="CapsuleMesh" id="MerchantMesh"]
+material = SubResource("MerchantMaterial")
+radius = 0.38
+height = 1.75
+
+[sub_resource type="CylinderShape3D" id="InteractionShape"]
+height = 2.2
+radius = 0.65
+
+[node name="Workshop" type="Node3D"]
+
+[node name="Exterior" type="Node3D" parent="."]
+
+[node name="Floor" type="StaticBody3D" parent="Exterior"]
+position = Vector3(0, 0.1, -10)
+scale = Vector3(10, 0.2, 10)
+collision_layer = 1
+
+[node name="Mesh" type="MeshInstance3D" parent="Exterior/Floor"]
+mesh = SubResource("UnitFloorMesh")
+
+[node name="Collision" type="CollisionShape3D" parent="Exterior/Floor"]
+shape = SubResource("UnitBoxShape")
+
+[node name="BackWall" type="StaticBody3D" parent="Exterior"]
+position = Vector3(0, 1.5, -15)
+scale = Vector3(10, 3, 0.35)
+collision_layer = 1
+
+[node name="Mesh" type="MeshInstance3D" parent="Exterior/BackWall"]
+mesh = SubResource("UnitWallMesh")
+
+[node name="Collision" type="CollisionShape3D" parent="Exterior/BackWall"]
+shape = SubResource("UnitBoxShape")
+
+[node name="LeftWall" type="StaticBody3D" parent="Exterior"]
+position = Vector3(-5, 1.5, -10)
+scale = Vector3(0.35, 3, 10)
+collision_layer = 1
+
+[node name="Mesh" type="MeshInstance3D" parent="Exterior/LeftWall"]
+mesh = SubResource("UnitWallMesh")
+
+[node name="Collision" type="CollisionShape3D" parent="Exterior/LeftWall"]
+shape = SubResource("UnitBoxShape")
+
+[node name="RightWall" type="StaticBody3D" parent="Exterior"]
+position = Vector3(5, 1.5, -10)
+scale = Vector3(0.35, 3, 10)
+collision_layer = 1
+
+[node name="Mesh" type="MeshInstance3D" parent="Exterior/RightWall"]
+mesh = SubResource("UnitWallMesh")
+
+[node name="Collision" type="CollisionShape3D" parent="Exterior/RightWall"]
+shape = SubResource("UnitBoxShape")
+
+[node name="FrontWallLeft" type="StaticBody3D" parent="Exterior"]
+position = Vector3(-3.5, 1.5, -5)
+scale = Vector3(3, 3, 0.35)
+collision_layer = 1
+
+[node name="Mesh" type="MeshInstance3D" parent="Exterior/FrontWallLeft"]
+mesh = SubResource("UnitWallMesh")
+
+[node name="Collision" type="CollisionShape3D" parent="Exterior/FrontWallLeft"]
+shape = SubResource("UnitBoxShape")
+
+[node name="FrontWallRight" type="StaticBody3D" parent="Exterior"]
+position = Vector3(3.5, 1.5, -5)
+scale = Vector3(3, 3, 0.35)
+collision_layer = 1
+
+[node name="Mesh" type="MeshInstance3D" parent="Exterior/FrontWallRight"]
+mesh = SubResource("UnitWallMesh")
+
+[node name="Collision" type="CollisionShape3D" parent="Exterior/FrontWallRight"]
+shape = SubResource("UnitBoxShape")
+
+[node name="Entrance" type="Area3D" parent="Exterior"]
+position = Vector3(0, 1.1, -4.8)
+collision_layer = 2
+collision_mask = 0
+monitorable = true
+script = ExtResource("2_portal")
+Label = "Entrar a Taller El Faro"
+Destination = Vector3(50, 0.25, 3.4)
+ArrivalMessage = "Interior · Taller El Faro"
+
+[node name="DoorVisual" type="MeshInstance3D" parent="Exterior/Entrance"]
+scale = Vector3(1.8, 2.2, 0.12)
+mesh = SubResource("UnitDoorMesh")
+
+[node name="Collision" type="CollisionShape3D" parent="Exterior/Entrance"]
+shape = SubResource("InteractionShape")
+
+[node name="Interior" type="Node3D" parent="."]
+position = Vector3(50, 0, 0)
+
+[node name="Floor" type="StaticBody3D" parent="Interior"]
+position = Vector3(0, 0.1, 0)
+scale = Vector3(10, 0.2, 10)
+collision_layer = 1
+
+[node name="Mesh" type="MeshInstance3D" parent="Interior/Floor"]
+mesh = SubResource("UnitFloorMesh")
+
+[node name="Collision" type="CollisionShape3D" parent="Interior/Floor"]
+shape = SubResource("UnitBoxShape")
+
+[node name="BackWall" type="StaticBody3D" parent="Interior"]
+position = Vector3(0, 1.5, -5)
+scale = Vector3(10, 3, 0.35)
+collision_layer = 1
+
+[node name="Mesh" type="MeshInstance3D" parent="Interior/BackWall"]
+mesh = SubResource("UnitWallMesh")
+
+[node name="Collision" type="CollisionShape3D" parent="Interior/BackWall"]
+shape = SubResource("UnitBoxShape")
+
+[node name="LeftWall" type="StaticBody3D" parent="Interior"]
+position = Vector3(-5, 1.5, 0)
+scale = Vector3(0.35, 3, 10)
+collision_layer = 1
+
+[node name="Mesh" type="MeshInstance3D" parent="Interior/LeftWall"]
+mesh = SubResource("UnitWallMesh")
+
+[node name="Collision" type="CollisionShape3D" parent="Interior/LeftWall"]
+shape = SubResource("UnitBoxShape")
+
+[node name="RightWall" type="StaticBody3D" parent="Interior"]
+position = Vector3(5, 1.5, 0)
+scale = Vector3(0.35, 3, 10)
+collision_layer = 1
+
+[node name="Mesh" type="MeshInstance3D" parent="Interior/RightWall"]
+mesh = SubResource("UnitWallMesh")
+
+[node name="Collision" type="CollisionShape3D" parent="Interior/RightWall"]
+shape = SubResource("UnitBoxShape")
+
+[node name="Merchant" type="Area3D" parent="Interior"]
+position = Vector3(0, 0.9, -1.5)
+collision_layer = 2
+collision_mask = 0
+monitorable = true
+script = ExtResource("1_merchant")
+MerchantName = "Rafael, comerciante"
+Greeting = "El Faro sigue trabajando. Si venís a hablar, hablamos."
+
+[node name="Visual" type="MeshInstance3D" parent="Interior/Merchant"]
+mesh = SubResource("MerchantMesh")
+
+[node name="Collision" type="CollisionShape3D" parent="Interior/Merchant"]
+shape = SubResource("InteractionShape")
+
+[node name="Exit" type="Area3D" parent="Interior"]
+position = Vector3(0, 1.1, 4.8)
+collision_layer = 2
+collision_mask = 0
+monitorable = true
+script = ExtResource("2_portal")
+Label = "Salir a la calle"
+Destination = Vector3(0, 0.25, -3.2)
+ArrivalMessage = "South District · Exterior"
+
+[node name="DoorVisual" type="MeshInstance3D" parent="Interior/Exit"]
+scale = Vector3(1.8, 2.2, 0.12)
+mesh = SubResource("UnitDoorMesh")
+
+[node name="Collision" type="CollisionShape3D" parent="Interior/Exit"]
+shape = SubResource("InteractionShape")

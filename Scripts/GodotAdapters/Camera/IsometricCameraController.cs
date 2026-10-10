@@ -1,0 +1,85 @@
+using Godot;
+
+namespace Omerta.GodotAdapters.Camera;
+
+public sealed partial class IsometricCameraController : Node3D
+{
+    [Export(PropertyHint.Range, "12,24,0.5")]
+    public float Distance { get; set; } = 18.0f;
+
+    [Export(PropertyHint.Range, "25,75,1")]
+    public float PitchDegrees { get; set; } = 58.0f;
+
+    [Export(PropertyHint.Range, "-180,180,1")]
+    public float YawDegrees { get; set; } = 45.0f;
+
+    [Export]
+    public float FocusHeight { get; set; } = 0.8f;
+
+    [Export]
+    public float FollowSharpness { get; set; } = 12.0f;
+
+    [Export]
+    public float CrouchHeightOffset { get; set; } = 0.25f;
+
+    private Node3D? _target;
+    private Camera3D? _camera;
+    private Vector3 _smoothedFocus;
+    private bool _isCrouched;
+    private bool _hasInitialFocus;
+
+    public Camera3D? Camera => _camera;
+
+    public override void _Ready()
+    {
+        AddToGroup("camera_rig");
+        _target = GetTree().GetFirstNodeInGroup("player") as Node3D;
+        _camera = GetNode<Camera3D>("Camera3D");
+        _camera.AddToGroup("game_camera");
+        UpdateCamera(1.0);
+    }
+
+    public override void _Process(double delta)
+    {
+        if (_target is null)
+        {
+            _target = GetTree().GetFirstNodeInGroup("player") as Node3D;
+        }
+
+        UpdateCamera(delta);
+    }
+
+    public void SetCrouched(bool crouched) => _isCrouched = crouched;
+
+    private void UpdateCamera(double delta)
+    {
+        if (_target is null || _camera is null)
+        {
+            return;
+        }
+
+        float height = FocusHeight - (_isCrouched ? CrouchHeightOffset : 0.0f);
+        Vector3 desiredFocus = _target.GlobalPosition + Vector3.Up * height;
+        if (!_hasInitialFocus)
+        {
+            _smoothedFocus = desiredFocus;
+            _hasInitialFocus = true;
+        }
+        else
+        {
+            float blend = 1.0f - Mathf.Exp(-FollowSharpness * (float)delta);
+            _smoothedFocus = _smoothedFocus.Lerp(desiredFocus, blend);
+        }
+
+        float pitch = Mathf.DegToRad(PitchDegrees);
+        float yaw = Mathf.DegToRad(YawDegrees);
+        float horizontal = Mathf.Cos(pitch);
+        Vector3 offset = new(
+            Mathf.Sin(yaw) * horizontal,
+            Mathf.Sin(pitch),
+            Mathf.Cos(yaw) * horizontal);
+
+        _camera.GlobalPosition = _smoothedFocus + offset * Distance;
+        _camera.LookAt(_smoothedFocus, Vector3.Up);
+    }
+}

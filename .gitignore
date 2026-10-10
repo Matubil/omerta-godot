@@ -1,0 +1,14 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# C# build output
+.mono/
+bin/
+obj/
+
+# Local IDE state
+.idea/
+.vs/
+.vscode/
+*.user

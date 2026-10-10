@@ -1,0 +1,70 @@
+[gd_scene load_steps=12 format=3]
+
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/GameBootstrap.cs" id="1_bootstrap"]
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/Input/PlayerInputAdapter.cs" id="2_input"]
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/Camera/IsometricCameraController.cs" id="3_camera"]
+[ext_resource type="PackedScene" path="res://Scenes/World/CityBlock.tscn" id="4_world"]
+[ext_resource type="PackedScene" path="res://Scenes/Businesses/Workshop.tscn" id="5_workshop"]
+[ext_resource type="PackedScene" path="res://Scenes/Characters/Player.tscn" id="6_player"]
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/World/WorldCursorProjector.cs" id="7_cursor"]
+[ext_resource type="PackedScene" path="res://Scenes/UI/Hud.tscn" id="8_hud"]
+
+[sub_resource type="Environment" id="Environment_main"]
+background_mode = 1
+background_color = Color(0.055, 0.07, 0.09, 1)
+ambient_light_source = 3
+ambient_light_color = Color(0.48, 0.55, 0.62, 1)
+ambient_light_energy = 0.65
+tonemap_mode = 2
+
+[sub_resource type="StandardMaterial3D" id="CursorMaterial"]
+transparency = 1
+albedo_color = Color(0.95, 0.72, 0.2, 0.72)
+emission_enabled = true
+emission = Color(0.55, 0.3, 0.04, 1)
+
+[sub_resource type="CylinderMesh" id="CursorMesh"]
+material = SubResource("CursorMaterial")
+top_radius = 0.22
+bottom_radius = 0.3
+height = 0.04
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_bootstrap")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_main")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-54, -28, 0)
+light_color = Color(1, 0.88, 0.7, 1)
+light_energy = 1.2
+shadow_enabled = true
+
+[node name="PlayerInput" type="Node" parent="." groups=["player_input"]]
+script = ExtResource("2_input")
+
+[node name="CityBlock" parent="." instance=ExtResource("4_world")]
+
+[node name="Workshop" parent="." instance=ExtResource("5_workshop")]
+
+[node name="Player" parent="." instance=ExtResource("6_player")]
+position = Vector3(0, 0.05, 4)
+
+[node name="CameraRig" type="Node3D" parent="." groups=["camera_rig"]]
+script = ExtResource("3_camera")
+
+[node name="Camera3D" type="Camera3D" parent="CameraRig" groups=["game_camera"]]
+current = true
+fov = 50.0
+near = 0.1
+far = 250.0
+
+[node name="WorldCursor" type="Node3D" parent="."]
+script = ExtResource("7_cursor")
+
+[node name="Mesh" type="MeshInstance3D" parent="WorldCursor"]
+mesh = SubResource("CursorMesh")
+cast_shadow = 0
+
+[node name="Hud" parent="." instance=ExtResource("8_hud")]

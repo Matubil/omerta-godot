@@ -1,0 +1,88 @@
+[gd_scene load_steps=9 format=3]
+
+[sub_resource type="StandardMaterial3D" id="GroundMaterial"]
+albedo_color = Color(0.16, 0.18, 0.19, 1)
+roughness = 1.0
+
+[sub_resource type="BoxMesh" id="GroundMesh"]
+material = SubResource("GroundMaterial")
+size = Vector3(40, 0.2, 40)
+
+[sub_resource type="BoxShape3D" id="GroundShape"]
+size = Vector3(40, 0.2, 40)
+
+[sub_resource type="StandardMaterial3D" id="SidewalkMaterial"]
+albedo_color = Color(0.38, 0.39, 0.37, 1)
+roughness = 0.95
+
+[sub_resource type="BoxMesh" id="UnitBoxMesh"]
+material = SubResource("SidewalkMaterial")
+size = Vector3(1, 1, 1)
+
+[sub_resource type="BoxShape3D" id="UnitBoxShape"]
+size = Vector3(1, 1, 1)
+
+[sub_resource type="StandardMaterial3D" id="BuildingMaterial"]
+albedo_color = Color(0.31, 0.24, 0.2, 1)
+roughness = 0.9
+
+[sub_resource type="BoxMesh" id="BuildingMesh"]
+material = SubResource("BuildingMaterial")
+size = Vector3(1, 1, 1)
+
+[node name="CityBlock" type="Node3D"]
+
+[node name="Ground" type="StaticBody3D" parent="."]
+position = Vector3(0, -0.1, 0)
+collision_layer = 1
+collision_mask = 1
+
+[node name="Mesh" type="MeshInstance3D" parent="Ground"]
+mesh = SubResource("GroundMesh")
+
+[node name="Collision" type="CollisionShape3D" parent="Ground"]
+shape = SubResource("GroundShape")
+
+[node name="SidewalkWest" type="StaticBody3D" parent="."]
+position = Vector3(-8, 0.1, 0)
+scale = Vector3(5, 0.2, 40)
+collision_layer = 1
+
+[node name="Mesh" type="MeshInstance3D" parent="SidewalkWest"]
+mesh = SubResource("UnitBoxMesh")
+
+[node name="Collision" type="CollisionShape3D" parent="SidewalkWest"]
+shape = SubResource("UnitBoxShape")
+
+[node name="SidewalkEast" type="StaticBody3D" parent="."]
+position = Vector3(8, 0.1, 0)
+scale = Vector3(5, 0.2, 40)
+collision_layer = 1
+
+[node name="Mesh" type="MeshInstance3D" parent="SidewalkEast"]
+mesh = SubResource("UnitBoxMesh")
+
+[node name="Collision" type="CollisionShape3D" parent="SidewalkEast"]
+shape = SubResource("UnitBoxShape")
+
+[node name="BuildingWest" type="StaticBody3D" parent="."]
+position = Vector3(-15, 2, 2)
+scale = Vector3(8, 4, 30)
+collision_layer = 1
+
+[node name="Mesh" type="MeshInstance3D" parent="BuildingWest"]
+mesh = SubResource("BuildingMesh")
+
+[node name="Collision" type="CollisionShape3D" parent="BuildingWest"]
+shape = SubResource("UnitBoxShape")
+
+[node name="BuildingEast" type="StaticBody3D" parent="."]
+position = Vector3(15, 2, 7)
+scale = Vector3(8, 4, 20)
+collision_layer = 1
+
+[node name="Mesh" type="MeshInstance3D" parent="BuildingEast"]
+mesh = SubResource("BuildingMesh")
+
+[node name="Collision" type="CollisionShape3D" parent="BuildingEast"]
+shape = SubResource("UnitBoxShape")
