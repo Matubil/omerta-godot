@@ -16,6 +16,8 @@ public sealed partial class WorldCursorProjector : Node3D
 
     public Vector3 AimPoint { get; private set; }
 
+    public Combatant? AimTarget { get; private set; }
+
     public override void _Ready() => AddToGroup("world_cursor");
 
     public override void _PhysicsProcess(double delta)
@@ -26,6 +28,7 @@ public sealed partial class WorldCursorProjector : Node3D
         {
             Visible = false;
             HasAimPoint = false;
+            AimTarget = null;
             return;
         }
 
@@ -36,6 +39,7 @@ public sealed partial class WorldCursorProjector : Node3D
         {
             Visible = false;
             HasAimPoint = false;
+            AimTarget = null;
             return;
         }
 
@@ -44,6 +48,7 @@ public sealed partial class WorldCursorProjector : Node3D
         {
             Visible = false;
             HasAimPoint = false;
+            AimTarget = null;
             return;
         }
 
@@ -59,12 +64,14 @@ public sealed partial class WorldCursorProjector : Node3D
         }
 
         Godot.Collections.Dictionary result = _camera.GetWorld3D().DirectSpaceState.IntersectRay(query);
+        AimTarget = null;
         if (result.Count > 0)
         {
             Node? collider = result["collider"].AsGodotObject() as Node;
             Combatant? combatant = Combatant.FindFromCollider(collider);
             if (combatant is not null)
             {
+                AimTarget = combatant;
                 AimPoint = combatant.Actor.GlobalPosition + Vector3.Up * 0.9f;
             }
         }

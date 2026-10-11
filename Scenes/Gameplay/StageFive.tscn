@@ -1,0 +1,202 @@
+[gd_scene load_steps=25 format=3]
+
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/StageFive/StageFiveController.cs" id="1_stage"]
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/Interaction/MissionGiverInteraction.cs" id="2_contact"]
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/Interaction/PublicPhoneInteraction.cs" id="3_phone"]
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/Law/WitnessController.cs" id="4_witness"]
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/Combat/Combatant.cs" id="5_combatant"]
+[ext_resource type="PackedScene" path="res://Scenes/Characters/Companion.tscn" id="6_companion"]
+[ext_resource type="PackedScene" path="res://Scenes/Characters/PoliceOfficer.tscn" id="7_officer"]
+[ext_resource type="PackedScene" path="res://Scenes/Characters/Counterattacker.tscn" id="8_attacker"]
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/Squad/SquadCommander.cs" id="9_commander"]
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/Squad/AllyReinforcementController.cs" id="10_reinforcement"]
+
+[sub_resource type="StandardMaterial3D" id="Material_contact"]
+albedo_color = Color(0.48, 0.36, 0.16, 1)
+roughness = 0.85
+
+[sub_resource type="CapsuleMesh" id="Mesh_contact"]
+material = SubResource("Material_contact")
+radius = 0.38
+height = 1.75
+
+[sub_resource type="CylinderShape3D" id="Shape_interaction"]
+height = 2.2
+radius = 0.72
+
+[sub_resource type="StandardMaterial3D" id="Material_phone"]
+albedo_color = Color(0.08, 0.14, 0.2, 1)
+metallic = 0.25
+roughness = 0.65
+
+[sub_resource type="BoxMesh" id="Mesh_phone"]
+material = SubResource("Material_phone")
+size = Vector3(0.7, 1.8, 0.55)
+
+[sub_resource type="StandardMaterial3D" id="Material_witness"]
+albedo_color = Color(0.54, 0.47, 0.32, 1)
+roughness = 0.88
+
+[sub_resource type="CapsuleMesh" id="Mesh_witness"]
+material = SubResource("Material_witness")
+radius = 0.35
+height = 1.8
+
+[sub_resource type="CapsuleShape3D" id="Shape_witness"]
+radius = 0.35
+height = 1.8
+
+[sub_resource type="StandardMaterial3D" id="Material_ally_vehicle"]
+albedo_color = Color(0.1, 0.32, 0.17, 1)
+metallic = 0.35
+roughness = 0.52
+
+[sub_resource type="BoxMesh" id="Mesh_ally_vehicle"]
+material = SubResource("Material_ally_vehicle")
+size = Vector3(2.2, 0.9, 4.2)
+
+[sub_resource type="StandardMaterial3D" id="Material_police_vehicle"]
+albedo_color = Color(0.08, 0.18, 0.42, 1)
+metallic = 0.4
+roughness = 0.48
+
+[sub_resource type="BoxMesh" id="Mesh_police_vehicle"]
+material = SubResource("Material_police_vehicle")
+size = Vector3(2.2, 0.9, 4.2)
+
+[sub_resource type="StandardMaterial3D" id="Material_beacon_red"]
+shading_mode = 0
+albedo_color = Color(1, 0.05, 0.04, 1)
+emission_enabled = true
+emission = Color(1, 0.02, 0.01, 1)
+
+[sub_resource type="StandardMaterial3D" id="Material_beacon_blue"]
+shading_mode = 0
+albedo_color = Color(0.05, 0.25, 1, 1)
+emission_enabled = true
+emission = Color(0.02, 0.1, 1, 1)
+
+[sub_resource type="BoxMesh" id="Mesh_beacon_red"]
+material = SubResource("Material_beacon_red")
+size = Vector3(0.55, 0.18, 0.28)
+
+[sub_resource type="BoxMesh" id="Mesh_beacon_blue"]
+material = SubResource("Material_beacon_blue")
+size = Vector3(0.55, 0.18, 0.28)
+
+[node name="StageFive" type="Node3D"]
+script = ExtResource("1_stage")
+
+[node name="Contact" type="Area3D" parent="."]
+position = Vector3(-8, 0.9, 7)
+collision_layer = 2
+collision_mask = 0
+monitorable = true
+script = ExtResource("2_contact")
+
+[node name="Visual" type="MeshInstance3D" parent="Contact"]
+mesh = SubResource("Mesh_contact")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Contact"]
+shape = SubResource("Shape_interaction")
+
+[node name="Label" type="Label3D" parent="Contact"]
+position = Vector3(0, 1.25, 0)
+modulate = Color(0.95, 0.76, 0.36, 1)
+text = "DON VITTORIO · CONTACTO"
+font_size = 30
+outline_size = 8
+billboard = 1
+
+[node name="PublicPhone" type="Area3D" parent="."]
+position = Vector3(-6, 0.9, 1)
+collision_layer = 2
+collision_mask = 0
+monitorable = true
+script = ExtResource("3_phone")
+
+[node name="Visual" type="MeshInstance3D" parent="PublicPhone"]
+mesh = SubResource("Mesh_phone")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="PublicPhone"]
+shape = SubResource("Shape_interaction")
+
+[node name="Label" type="Label3D" parent="PublicPhone"]
+position = Vector3(0, 1.25, 0)
+modulate = Color(0.5, 0.82, 1, 1)
+text = "TELÉFONO PÚBLICO"
+font_size = 28
+outline_size = 7
+billboard = 1
+
+[node name="Witness" type="StaticBody3D" parent="."]
+position = Vector3(8, 0.05, 2)
+collision_layer = 1
+collision_mask = 1
+script = ExtResource("4_witness")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Witness"]
+position = Vector3(0, 0.9, 0)
+shape = SubResource("Shape_witness")
+
+[node name="Visual" type="Node3D" parent="Witness"]
+position = Vector3(0, 0.9, 0)
+
+[node name="Body" type="MeshInstance3D" parent="Witness/Visual"]
+mesh = SubResource("Mesh_witness")
+
+[node name="Combatant" type="Node" parent="Witness"]
+script = ExtResource("5_combatant")
+CombatantId = "character.street-witness"
+MaximumHealth = 40
+
+[node name="Label" type="Label3D" parent="Witness"]
+position = Vector3(0, 2.15, 0)
+modulate = Color(0.9, 0.84, 0.66, 1)
+text = "TESTIGO"
+font_size = 28
+outline_size = 7
+billboard = 1
+
+[node name="StartingCompanion" parent="." instance=ExtResource("6_companion")]
+position = Vector3(-2, 0.05, 5)
+
+[node name="ReserveCompanion" parent="." groups=["reserve_companion"] instance=ExtResource("6_companion")]
+position = Vector3(0, 0.05, 24)
+StartsActive = false
+
+[node name="ReserveCompanion2" parent="." groups=["reserve_companion"] instance=ExtResource("6_companion")]
+position = Vector3(1, 0.05, 24)
+StartsActive = false
+
+[node name="ReinforcementVehicle" type="Node3D" parent="."]
+position = Vector3(0, 0.45, 24)
+
+[node name="Body" type="MeshInstance3D" parent="ReinforcementVehicle"]
+mesh = SubResource("Mesh_ally_vehicle")
+
+[node name="PoliceVehicle" type="Node3D" parent="."]
+position = Vector3(18, 0.45, 18)
+
+[node name="Body" type="MeshInstance3D" parent="PoliceVehicle"]
+mesh = SubResource("Mesh_police_vehicle")
+
+[node name="RedBeacon" type="MeshInstance3D" parent="PoliceVehicle"]
+position = Vector3(-0.34, 0.56, 0)
+mesh = SubResource("Mesh_beacon_red")
+
+[node name="BlueBeacon" type="MeshInstance3D" parent="PoliceVehicle"]
+position = Vector3(0.34, 0.56, 0)
+mesh = SubResource("Mesh_beacon_blue")
+
+[node name="PoliceOfficer" parent="." instance=ExtResource("7_officer")]
+position = Vector3(18, 0.05, 18)
+
+[node name="Counterattacker" parent="." instance=ExtResource("8_attacker")]
+position = Vector3(-17, 0.05, 15)
+
+[node name="SquadCommander" type="Node" parent="."]
+script = ExtResource("9_commander")
+
+[node name="AllyReinforcement" type="Node" parent="."]
+script = ExtResource("10_reinforcement")

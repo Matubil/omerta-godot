@@ -7,6 +7,7 @@ using Omerta.GodotAdapters.Characters;
 using Omerta.GodotAdapters.Combat;
 using Omerta.GodotAdapters.Economy;
 using Omerta.GodotAdapters.Persistence;
+using Omerta.GodotAdapters.StageFive;
 using Omerta.Presentation;
 
 namespace Omerta.GodotAdapters;
@@ -23,6 +24,7 @@ public sealed partial class GameBootstrap : Node3D
     private WorkshopController? _workshop;
     private EconomyController? _economy;
     private PersistenceController? _persistence;
+    private StageFiveController? _stageFive;
     private Vector3 _playerSpawn;
     private Vector3 _playerRotation;
     private Vector3 _rivalSpawn;
@@ -30,13 +32,14 @@ public sealed partial class GameBootstrap : Node3D
 
     public override void _Ready()
     {
-        GD.Print($"{GameIdentity.CommercialName} [{GameIdentity.TechnicalName}] — Etapas 0 a 4");
+        GD.Print($"{GameIdentity.CommercialName} [{GameIdentity.TechnicalName}] — Etapas 0 a 5");
         _player = GetTree().GetFirstNodeInGroup("player") as PlayerController;
         _rival = GetTree().GetFirstNodeInGroup("rival") as RivalController;
         _hud = GetTree().GetFirstNodeInGroup("hud") as HudController;
         _workshop = GetTree().GetFirstNodeInGroup("workshop") as WorkshopController;
         _economy = GetTree().GetFirstNodeInGroup("economy") as EconomyController;
         _persistence = GetTree().GetFirstNodeInGroup("persistence") as PersistenceController;
+        _stageFive = GetTree().GetFirstNodeInGroup("stage_five") as StageFiveController;
         if (_player is null || _rival is null)
         {
             GD.PushError("The combat slice requires one player and one rival.");
@@ -50,7 +53,7 @@ public sealed partial class GameBootstrap : Node3D
         _rivalSpawn = _rival.GlobalPosition;
         _rivalRotation = _rival.Rotation;
         _playerCombatant.Defeated += OnPlayerDefeated;
-        GD.Print("Etapa 4 activa: guardado, carga y recuperación tras derrota.");
+        GD.Print("Etapa 5 activa: ciclo jugable completo del vertical slice.");
     }
 
     public override void _Process(double delta)
@@ -81,6 +84,7 @@ public sealed partial class GameBootstrap : Node3D
         _rival.ResetCombat(_rivalSpawn, _rivalRotation);
         _workshop?.ResetBusinessEncounter();
         _economy?.ResetEconomy();
+        _stageFive?.ResetStageFiveEncounter();
         _hud?.ShowStatus("Encuentro reiniciado.");
     }
 

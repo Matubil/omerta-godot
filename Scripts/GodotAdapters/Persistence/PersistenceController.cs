@@ -8,6 +8,7 @@ using Omerta.GodotAdapters.Characters;
 using Omerta.GodotAdapters.Combat;
 using Omerta.GodotAdapters.Economy;
 using Omerta.GodotAdapters.Input;
+using Omerta.GodotAdapters.StageFive;
 using Omerta.Infrastructure.Persistence;
 using Omerta.Presentation;
 
@@ -31,6 +32,7 @@ public sealed partial class PersistenceController : Node
     private WorkshopController? _workshop;
     private EconomyController? _economy;
     private HudController? _hud;
+    private StageFiveController? _stageFive;
     private bool _recoveryScheduled;
     private bool _runSmokeTest;
 
@@ -47,9 +49,11 @@ public sealed partial class PersistenceController : Node
         _workshop = GetTree().GetFirstNodeInGroup("workshop") as WorkshopController;
         _economy = GetTree().GetFirstNodeInGroup("economy") as EconomyController;
         _hud = GetTree().GetFirstNodeInGroup("hud") as HudController;
-        if (_player is null || _rival is null || _workshop is null || _economy is null)
+        _stageFive = GetTree().GetFirstNodeInGroup("stage_five") as StageFiveController;
+        if (_player is null || _rival is null || _workshop is null || _economy is null ||
+            _stageFive is null)
         {
-            GD.PushError("Persistence requires the player, rival, workshop and economy nodes.");
+            GD.PushError("Persistence requires the player, rival, workshop, economy and stage 5 nodes.");
             SetProcess(false);
             return;
         }
@@ -134,6 +138,7 @@ public sealed partial class PersistenceController : Node
             MagazineAmmo = _playerWeapon.Runtime.AmmoInMagazine,
             ReserveAmmo = _playerWeapon.Runtime.ReserveAmmo
         });
+        data.Missions.Add(_stageFive!.CreateMissionSaveData());
         return data;
     }
 
@@ -153,6 +158,7 @@ public sealed partial class PersistenceController : Node
             restore.PlayerHealth,
             restore.Weapon.MagazineAmmo,
             restore.Weapon.ReserveAmmo);
+        _stageFive!.RestoreAfterLoad(restore.Mission);
     }
 
     public bool SaveNow()
@@ -315,6 +321,7 @@ public sealed partial class PersistenceController : Node
         Combatant merchant = _workshop.GetNode<Combatant>("Interior/Merchant/Combatant");
         int merchantHealth = FindHealth(data, merchant);
         WeaponSaveData weapon = FindWeapon(data, _playerWeapon!.Runtime.Specification.Id);
+        MissionProgressSaveData? mission = _stageFive!.ValidateMissionProgress(data.Missions);
         if (weapon.MagazineAmmo < 0 ||
             weapon.MagazineAmmo > _playerWeapon.Runtime.Specification.MagazineCapacity ||
             weapon.ReserveAmmo < 0)
@@ -342,6 +349,7 @@ public sealed partial class PersistenceController : Node
             rivalHealth,
             merchantHealth,
             weapon,
+            mission,
             position,
             rotation.Normalized());
     }
@@ -431,7 +439,8 @@ public sealed partial class PersistenceController : Node
     {
         if (_storage is null || _player is null || _playerCombat is null ||
             _playerCombatant is null || _playerWeapon is null || _rival is null ||
-            _rivalCombatant is null || _workshop is null || _economy is null)
+            _rivalCombatant is null || _workshop is null || _economy is null ||
+            _stageFive is null)
         {
             throw new InvalidOperationException("Persistence has not been initialized.");
         }
@@ -449,6 +458,7 @@ public sealed partial class PersistenceController : Node
         int RivalHealth,
         int MerchantHealth,
         WeaponSaveData Weapon,
+        MissionProgressSaveData? Mission,
         Vector3 PlayerPosition,
         Quaternion PlayerRotation);
 }

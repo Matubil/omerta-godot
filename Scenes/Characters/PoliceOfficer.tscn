@@ -1,0 +1,85 @@
+[gd_scene load_steps=12 format=3]
+
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/Law/PoliceOfficerController.cs" id="1_officer"]
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/Combat/Combatant.cs" id="2_combatant"]
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/Combat/HitscanWeaponController.cs" id="3_weapon"]
+[ext_resource type="Resource" path="res://Resources/Weapons/PrototypePistol.tres" id="4_pistol"]
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/Law/PoliceBribeInteraction.cs" id="5_bribe"]
+
+[sub_resource type="CapsuleShape3D" id="Shape_officer"]
+radius = 0.35
+height = 1.8
+
+[sub_resource type="StandardMaterial3D" id="Material_officer"]
+albedo_color = Color(0.08, 0.18, 0.42, 1)
+roughness = 0.82
+
+[sub_resource type="CapsuleMesh" id="Mesh_officer"]
+material = SubResource("Material_officer")
+radius = 0.35
+height = 1.8
+
+[sub_resource type="StandardMaterial3D" id="Material_weapon"]
+albedo_color = Color(0.05, 0.055, 0.06, 1)
+metallic = 0.4
+roughness = 0.4
+
+[sub_resource type="BoxMesh" id="Mesh_weapon"]
+material = SubResource("Material_weapon")
+size = Vector3(0.12, 0.14, 0.52)
+
+[sub_resource type="SphereShape3D" id="Shape_interaction"]
+radius = 1.4
+
+[node name="PoliceOfficer" type="CharacterBody3D"]
+collision_layer = 1
+collision_mask = 1
+floor_snap_length = 0.35
+script = ExtResource("1_officer")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+position = Vector3(0, 0.9, 0)
+shape = SubResource("Shape_officer")
+
+[node name="Visual" type="Node3D" parent="."]
+position = Vector3(0, 0.9, 0)
+
+[node name="Body" type="MeshInstance3D" parent="Visual"]
+mesh = SubResource("Mesh_officer")
+
+[node name="Weapon" type="Node3D" parent="Visual"]
+position = Vector3(0.3, 0.1, 0.28)
+
+[node name="Mesh" type="MeshInstance3D" parent="Visual/Weapon"]
+mesh = SubResource("Mesh_weapon")
+
+[node name="Muzzle" type="Marker3D" parent="Visual/Weapon"]
+position = Vector3(0, 0, 0.31)
+
+[node name="Label" type="Label3D" parent="."]
+position = Vector3(0, 2.15, 0)
+modulate = Color(0.36, 0.65, 1, 1)
+text = "POLICÍA"
+font_size = 34
+outline_size = 8
+billboard = 1
+
+[node name="Combatant" type="Node" parent="."]
+script = ExtResource("2_combatant")
+CombatantId = "character.police-officer"
+MaximumHealth = 100
+
+[node name="WeaponController" type="Node" parent="."]
+script = ExtResource("3_weapon")
+Definition = ExtResource("4_pistol")
+InitialReserveAmmo = 21
+
+[node name="BribeInteraction" type="Area3D" parent="."]
+position = Vector3(0, 0.9, 0)
+collision_layer = 2
+collision_mask = 0
+monitorable = true
+script = ExtResource("5_bribe")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="BribeInteraction"]
+shape = SubResource("Shape_interaction")

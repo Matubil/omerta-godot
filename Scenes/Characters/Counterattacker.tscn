@@ -1,0 +1,71 @@
+[gd_scene load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/Businesses/CounterattackerController.cs" id="1_attacker"]
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/Combat/Combatant.cs" id="2_combatant"]
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/Combat/HitscanWeaponController.cs" id="3_weapon"]
+[ext_resource type="Resource" path="res://Resources/Weapons/PrototypePistol.tres" id="4_pistol"]
+
+[sub_resource type="CapsuleShape3D" id="Shape_attacker"]
+radius = 0.35
+height = 1.8
+
+[sub_resource type="StandardMaterial3D" id="Material_attacker"]
+albedo_color = Color(0.46, 0.08, 0.11, 1)
+roughness = 0.82
+
+[sub_resource type="CapsuleMesh" id="Mesh_attacker"]
+material = SubResource("Material_attacker")
+radius = 0.35
+height = 1.8
+
+[sub_resource type="StandardMaterial3D" id="Material_weapon"]
+albedo_color = Color(0.05, 0.055, 0.06, 1)
+metallic = 0.4
+roughness = 0.4
+
+[sub_resource type="BoxMesh" id="Mesh_weapon"]
+material = SubResource("Material_weapon")
+size = Vector3(0.12, 0.14, 0.52)
+
+[node name="Counterattacker" type="CharacterBody3D"]
+collision_layer = 1
+collision_mask = 1
+floor_snap_length = 0.35
+script = ExtResource("1_attacker")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+position = Vector3(0, 0.9, 0)
+shape = SubResource("Shape_attacker")
+
+[node name="Visual" type="Node3D" parent="."]
+position = Vector3(0, 0.9, 0)
+
+[node name="Body" type="MeshInstance3D" parent="Visual"]
+mesh = SubResource("Mesh_attacker")
+
+[node name="Weapon" type="Node3D" parent="Visual"]
+position = Vector3(0.3, 0.1, 0.28)
+
+[node name="Mesh" type="MeshInstance3D" parent="Visual/Weapon"]
+mesh = SubResource("Mesh_weapon")
+
+[node name="Muzzle" type="Marker3D" parent="Visual/Weapon"]
+position = Vector3(0, 0, 0.31)
+
+[node name="Label" type="Label3D" parent="."]
+position = Vector3(0, 2.15, 0)
+modulate = Color(1, 0.3, 0.3, 1)
+text = "REPRESALIA"
+font_size = 30
+outline_size = 8
+billboard = 1
+
+[node name="Combatant" type="Node" parent="."]
+script = ExtResource("2_combatant")
+CombatantId = "character.circle-ferro-counterattacker"
+MaximumHealth = 90
+
+[node name="WeaponController" type="Node" parent="."]
+script = ExtResource("3_weapon")
+Definition = ExtResource("4_pistol")
+InitialReserveAmmo = 21

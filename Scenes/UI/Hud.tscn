@@ -99,6 +99,24 @@ theme_override_colors/font_color = Color(0.55, 0.94, 0.6, 1)
 theme_override_font_sizes/font_size = 16
 text = "FONDOS  $100"
 
+[node name="MissionState" type="Label" parent="."]
+offset_left = 24.0
+offset_top = 264.0
+offset_right = 470.0
+offset_bottom = 316.0
+theme_override_colors/font_color = Color(0.93, 0.76, 0.36, 1)
+theme_override_font_sizes/font_size = 15
+text = "ENCARGO · DISPONIBLE\nHABLÁ CON DON VITTORIO"
+
+[node name="SquadState" type="Label" parent="."]
+offset_left = 24.0
+offset_top = 322.0
+offset_right = 420.0
+offset_bottom = 350.0
+theme_override_colors/font_color = Color(0.48, 0.95, 0.62, 1)
+theme_override_font_sizes/font_size = 14
+text = "CREW 1 · SIGUIENDO"
+
 [node name="BusinessState" type="Label" parent="."]
 anchors_preset = 1
 anchor_left = 1.0
@@ -127,6 +145,34 @@ theme_override_font_sizes/font_size = 16
 text = "RIVAL  100/100 · SIN ALERTA"
 horizontal_alignment = 2
 
+[node name="PoliceState" type="Label" parent="."]
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 260.0
+offset_top = 356.0
+offset_right = -260.0
+offset_bottom = 386.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(0.35, 0.65, 1, 1)
+theme_override_font_sizes/font_size = 16
+text = "POLICÍA · ALERTA 1"
+horizontal_alignment = 1
+visible = false
+
+[node name="CounterattackState" type="Label" parent="."]
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 260.0
+offset_top = 390.0
+offset_right = -260.0
+offset_bottom = 420.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(1, 0.35, 0.28, 1)
+theme_override_font_sizes/font_size = 16
+text = "REPRESALIA · AVISO"
+horizontal_alignment = 1
+visible = false
+
 [node name="Help" type="Label" parent="."]
 anchors_preset = 1
 anchor_left = 1.0
@@ -138,7 +184,7 @@ offset_bottom = 186.0
 grow_horizontal = 0
 theme_override_colors/font_color = Color(0.72, 0.78, 0.8, 1)
 theme_override_font_sizes/font_size = 14
-text = "WASD  MOVER\nSHIFT  CORRER\nCTRL / C  AGACHARSE\nE  INTERACTUAR\nR  RECARGAR\nRMB  ADS · LMB  DISPARAR\nF5  GUARDAR · F9  CARGAR\nT  REINICIAR ENCUENTRO"
+text = "WASD  MOVER\nSHIFT  CORRER\nCTRL / C  AGACHARSE\nE  INTERACTUAR\nR  RECARGAR\nRMB  ADS · LMB  DISPARAR\nQ  ORDEN CONTEXTUAL · G  REAGRUPAR\nF5  GUARDAR · F9  CARGAR\nT  REINICIAR ENCUENTRO"
 horizontal_alignment = 2
 
 [node name="StatusMessage" type="Label" parent="."]

@@ -25,6 +25,8 @@ public sealed class PersistenceTests
         Assert.That(restored.PlayerPose.Position.X, Is.EqualTo(48.5f));
         Assert.That(restored.PlayerWeapons.Weapons[0].MagazineAmmo, Is.EqualTo(3));
         Assert.That(restored.PlayerWeapons.Weapons[0].ReserveAmmo, Is.EqualTo(21));
+        Assert.That(restored.Missions[0].MissionId, Is.EqualTo("mission.el-faro-takeover"));
+        Assert.That(restored.Missions[0].Status, Is.EqualTo("TakeControl"));
     }
 
     [Test]
@@ -42,6 +44,20 @@ public sealed class PersistenceTests
     }
 
     [Test]
+    public void VersionOneSaveMigratesWithNoInventedMissionProgress()
+    {
+        SaveGameSerializer serializer = new();
+        string oldJson = serializer.Serialize(CreateSaveGame())
+            .Replace("\"version\": 2", "\"version\": 1");
+
+        SaveGameData migrated = serializer.Deserialize(oldJson);
+
+        Assert.That(migrated.Version, Is.EqualTo(SaveGameData.CurrentVersion));
+        Assert.That(migrated.Missions, Is.Empty);
+        Assert.That(migrated.Economy.Balance, Is.EqualTo(350));
+    }
+
+    [Test]
     public void JsonExcludesTransientEncounterState()
     {
         string json = new SaveGameSerializer().Serialize(CreateSaveGame());
@@ -52,6 +68,9 @@ public sealed class PersistenceTests
         Assert.That(json, Does.Not.Contain("IsAiming"));
         Assert.That(json, Does.Not.Contain("IsReloading"));
         Assert.That(json, Does.Not.Contain("EnvironmentalPressure"));
+        Assert.That(json, Does.Not.Contain("PoliceResponse"));
+        Assert.That(json, Does.Not.Contain("Companion"));
+        Assert.That(json, Does.Not.Contain("Counterattack"));
     }
 
     [Test]
@@ -149,6 +168,12 @@ public sealed class PersistenceTests
             WeaponId = "weapon.prototype-pistol",
             MagazineAmmo = 3,
             ReserveAmmo = 21
+        });
+        data.Missions.Add(new MissionProgressSaveData
+        {
+            MissionId = "mission.el-faro-takeover",
+            Status = "TakeControl",
+            RewardGranted = false
         });
         return data;
     }

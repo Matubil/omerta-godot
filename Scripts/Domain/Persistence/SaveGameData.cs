@@ -4,7 +4,7 @@ namespace Omerta.Domain.Persistence;
 
 public sealed class SaveGameData
 {
-    public const int CurrentVersion = 1;
+    public const int CurrentVersion = 2;
 
     public int Version { get; set; } = CurrentVersion;
 
@@ -17,6 +17,8 @@ public sealed class SaveGameData
     public PlayerPoseSaveData PlayerPose { get; set; } = new();
 
     public PlayerWeaponsSaveData PlayerWeapons { get; set; } = new();
+
+    public List<MissionProgressSaveData> Missions { get; set; } = new();
 }
 
 public sealed class EconomySaveData
@@ -79,4 +81,13 @@ public sealed class WeaponSaveData
     public int MagazineAmmo { get; set; }
 
     public int ReserveAmmo { get; set; }
+}
+
+public sealed class MissionProgressSaveData
+{
+    public string MissionId { get; set; } = string.Empty;
+
+    public string Status { get; set; } = string.Empty;
+
+    public bool RewardGranted { get; set; }
 }

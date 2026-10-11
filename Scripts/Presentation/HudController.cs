@@ -14,6 +14,10 @@ public sealed partial class HudController : CanvasLayer
     private Label? _aimLabel;
     private Label? _economyLabel;
     private Label? _businessLabel;
+    private Label? _missionLabel;
+    private Label? _squadLabel;
+    private Label? _policeLabel;
+    private Label? _counterattackLabel;
     private float _statusRemaining;
 
     public override void _Ready()
@@ -28,6 +32,10 @@ public sealed partial class HudController : CanvasLayer
         _aimLabel = GetNode<Label>("AimState");
         _economyLabel = GetNode<Label>("Economy");
         _businessLabel = GetNode<Label>("BusinessState");
+        _missionLabel = GetNode<Label>("MissionState");
+        _squadLabel = GetNode<Label>("SquadState");
+        _policeLabel = GetNode<Label>("PoliceState");
+        _counterattackLabel = GetNode<Label>("CounterattackState");
     }
 
     public override void _Process(double delta)
@@ -137,5 +145,49 @@ public sealed partial class HudController : CanvasLayer
             _ => "SIN ALERTA"
         };
         _enemyLabel.Text = $"RIVAL  {current}/{maximum} · {state}";
+    }
+
+    public void SetMission(string objective, string status)
+    {
+        if (_missionLabel is not null)
+        {
+            _missionLabel.Text = $"ENCARGO · {status.ToUpperInvariant()}\n{objective}";
+        }
+    }
+
+    public void SetSquad(string order, int activeCount)
+    {
+        if (_squadLabel is not null)
+        {
+            _squadLabel.Text = $"CREW {activeCount} · {order}";
+        }
+    }
+
+    public void SetPolice(string status, int wantedLevel, float remainingSeconds)
+    {
+        if (_policeLabel is null)
+        {
+            return;
+        }
+
+        bool active = wantedLevel > 0;
+        _policeLabel.Visible = active;
+        _policeLabel.Text = active
+            ? $"POLICÍA · ALERTA {wantedLevel} · {status.ToUpperInvariant()} · {remainingSeconds:0.0}s"
+            : string.Empty;
+    }
+
+    public void SetCounterattack(string status, float remainingSeconds)
+    {
+        if (_counterattackLabel is null)
+        {
+            return;
+        }
+
+        bool active = status is "Warning" or "InProgress";
+        _counterattackLabel.Visible = active;
+        _counterattackLabel.Text = active
+            ? $"REPRESALIA · {status.ToUpperInvariant()} · {remainingSeconds:0.0}s"
+            : string.Empty;
     }
 }

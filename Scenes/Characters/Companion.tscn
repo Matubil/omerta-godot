@@ -1,0 +1,71 @@
+[gd_scene load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/Squad/SquadCompanionController.cs" id="1_companion"]
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/Combat/Combatant.cs" id="2_combatant"]
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/Combat/HitscanWeaponController.cs" id="3_weapon"]
+[ext_resource type="Resource" path="res://Resources/Weapons/PrototypePistol.tres" id="4_pistol"]
+
+[sub_resource type="CapsuleShape3D" id="Shape_companion"]
+radius = 0.35
+height = 1.8
+
+[sub_resource type="StandardMaterial3D" id="Material_companion"]
+albedo_color = Color(0.13, 0.42, 0.25, 1)
+roughness = 0.82
+
+[sub_resource type="CapsuleMesh" id="Mesh_companion"]
+material = SubResource("Material_companion")
+radius = 0.35
+height = 1.8
+
+[sub_resource type="StandardMaterial3D" id="Material_weapon"]
+albedo_color = Color(0.06, 0.065, 0.07, 1)
+metallic = 0.35
+roughness = 0.42
+
+[sub_resource type="BoxMesh" id="Mesh_weapon"]
+material = SubResource("Material_weapon")
+size = Vector3(0.12, 0.14, 0.52)
+
+[node name="Companion" type="CharacterBody3D"]
+collision_layer = 1
+collision_mask = 1
+floor_snap_length = 0.35
+script = ExtResource("1_companion")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+position = Vector3(0, 0.9, 0)
+shape = SubResource("Shape_companion")
+
+[node name="Visual" type="Node3D" parent="."]
+position = Vector3(0, 0.9, 0)
+
+[node name="Body" type="MeshInstance3D" parent="Visual"]
+mesh = SubResource("Mesh_companion")
+
+[node name="Weapon" type="Node3D" parent="Visual"]
+position = Vector3(0.3, 0.1, 0.28)
+
+[node name="Mesh" type="MeshInstance3D" parent="Visual/Weapon"]
+mesh = SubResource("Mesh_weapon")
+
+[node name="Muzzle" type="Marker3D" parent="Visual/Weapon"]
+position = Vector3(0, 0, 0.31)
+
+[node name="Label" type="Label3D" parent="."]
+position = Vector3(0, 2.15, 0)
+modulate = Color(0.42, 1, 0.58, 1)
+text = "CREW"
+font_size = 34
+outline_size = 8
+billboard = 1
+
+[node name="Combatant" type="Node" parent="."]
+script = ExtResource("2_combatant")
+CombatantId = "character.companion"
+MaximumHealth = 80
+
+[node name="WeaponController" type="Node" parent="."]
+script = ExtResource("3_weapon")
+Definition = ExtResource("4_pistol")
+InitialReserveAmmo = 21

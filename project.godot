@@ -92,6 +92,16 @@ load_game={
 "events": [Object(InputEventKey,"physical_keycode":4194340)
 ]
 }
+squad_command={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":81)
+]
+}
+squad_regroup={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":71)
+]
+}
 
 [physics]
 

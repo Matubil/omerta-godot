@@ -38,7 +38,12 @@ public sealed class SaveGameSerializer
             throw new InvalidDataException("The save file is not valid JSON.", exception);
         }
 
-        if (data.Version != SaveGameData.CurrentVersion)
+        if (data.Version == 1)
+        {
+            data.Version = SaveGameData.CurrentVersion;
+            data.Missions = new();
+        }
+        else if (data.Version != SaveGameData.CurrentVersion)
         {
             throw new SaveGameVersionException(data.Version, SaveGameData.CurrentVersion);
         }
@@ -51,6 +56,7 @@ public sealed class SaveGameSerializer
         data.PlayerPose.Rotation ??= new QuaternionSaveData();
         data.PlayerWeapons ??= new PlayerWeaponsSaveData();
         data.PlayerWeapons.Weapons ??= new();
+        data.Missions ??= new();
         return data;
     }
 }
