@@ -86,3 +86,54 @@ mesh = SubResource("BuildingMesh")
 
 [node name="Collision" type="CollisionShape3D" parent="BuildingEast"]
 shape = SubResource("UnitBoxShape")
+
+[node name="HighCoverTraining" type="StaticBody3D" parent="." groups=["cover_surface"]]
+position = Vector3(-5, 1, 10)
+scale = Vector3(3, 2, 0.45)
+collision_layer = 1
+
+[node name="Mesh" type="MeshInstance3D" parent="HighCoverTraining"]
+mesh = SubResource("UnitBoxMesh")
+
+[node name="Collision" type="CollisionShape3D" parent="HighCoverTraining"]
+shape = SubResource("UnitBoxShape")
+
+[node name="HighCoverLabel" type="Label3D" parent="."]
+position = Vector3(-5, 2.45, 10)
+text = "COBERTURA ALTA"
+font_size = 32
+outline_size = 8
+
+[node name="LowCoverTraining" type="StaticBody3D" parent="." groups=["cover_surface", "vaultable"]]
+position = Vector3(5, 0.5, 10)
+scale = Vector3(3, 1, 0.45)
+collision_layer = 1
+
+[node name="Mesh" type="MeshInstance3D" parent="LowCoverTraining"]
+mesh = SubResource("UnitBoxMesh")
+
+[node name="Collision" type="CollisionShape3D" parent="LowCoverTraining"]
+shape = SubResource("UnitBoxShape")
+
+[node name="LowCoverLabel" type="Label3D" parent="."]
+position = Vector3(5, 1.45, 10)
+text = "COBERTURA BAJA"
+font_size = 32
+outline_size = 8
+
+[node name="VaultTraining" type="StaticBody3D" parent="." groups=["cover_surface", "vaultable"]]
+position = Vector3(0, 0.45, 14)
+scale = Vector3(2.5, 0.9, 0.65)
+collision_layer = 1
+
+[node name="Mesh" type="MeshInstance3D" parent="VaultTraining"]
+mesh = SubResource("UnitBoxMesh")
+
+[node name="Collision" type="CollisionShape3D" parent="VaultTraining"]
+shape = SubResource("UnitBoxShape")
+
+[node name="VaultLabel" type="Label3D" parent="."]
+position = Vector3(0, 1.4, 14)
+text = "ESPACIO: VAULT"
+font_size = 32
+outline_size = 8

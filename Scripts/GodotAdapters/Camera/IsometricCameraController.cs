@@ -27,6 +27,12 @@ public sealed partial class IsometricCameraController : Node3D
     public float CrouchHeightOffset { get; set; } = 0.25f;
 
     [Export]
+    public float LowCoverHeightOffset { get; set; } = 0.2f;
+
+    [Export]
+    public float CoverLateralOffset { get; set; } = 0.45f;
+
+    [Export]
     public float AimDistance { get; set; } = 14.5f;
 
     [Export]
@@ -58,6 +64,8 @@ public sealed partial class IsometricCameraController : Node3D
     private Vector3 _smoothedFocus;
     private bool _isCrouched;
     private bool _isAiming;
+    private bool _isInCover;
+    private bool _isInLowCover;
     private bool _hasInitialFocus;
     private float _requestedDistance;
     private float _currentDistance;
@@ -113,6 +121,12 @@ public sealed partial class IsometricCameraController : Node3D
 
     public void SetAiming(bool aiming) => _isAiming = aiming;
 
+    public void SetCover(bool inCover, bool lowCover)
+    {
+        _isInCover = inCover;
+        _isInLowCover = inCover && lowCover;
+    }
+
     public CameraOcclusionProbe ProbeOcclusion(Vector3 focus, Vector3 desiredCameraPosition)
     {
         float requestedDistance = focus.DistanceTo(desiredCameraPosition);
@@ -136,8 +150,12 @@ public sealed partial class IsometricCameraController : Node3D
             return;
         }
 
-        float height = FocusHeight - (_isCrouched ? CrouchHeightOffset : 0.0f);
-        Vector3 desiredFocus = _target.GlobalPosition + Vector3.Up * height;
+        float yaw = Mathf.DegToRad(YawDegrees);
+        float height = FocusHeight - (_isCrouched ? CrouchHeightOffset : 0.0f) -
+            (_isInLowCover ? LowCoverHeightOffset : 0.0f);
+        Vector3 cameraRight = new(Mathf.Cos(yaw), 0.0f, -Mathf.Sin(yaw));
+        Vector3 desiredFocus = _target.GlobalPosition + Vector3.Up * height +
+            cameraRight * (_isInCover ? CoverLateralOffset : 0.0f);
         float transitionBlend = 1.0f - Mathf.Exp(-AimTransitionSpeed * (float)delta);
         _requestedDistance = Mathf.Lerp(
             _requestedDistance,
@@ -160,7 +178,6 @@ public sealed partial class IsometricCameraController : Node3D
         }
 
         float pitch = Mathf.DegToRad(PitchDegrees);
-        float yaw = Mathf.DegToRad(YawDegrees);
         float horizontal = Mathf.Cos(pitch);
         Vector3 offset = new(
             Mathf.Sin(yaw) * horizontal,

@@ -18,6 +18,8 @@ public sealed partial class PlayerInputAdapter : Node
     private static readonly StringName LoadGame = "load_game";
     private static readonly StringName SquadCommand = "squad_command";
     private static readonly StringName SquadRegroup = "squad_regroup";
+    private static readonly StringName Traverse = "traverse";
+    private static readonly StringName Cover = "cover";
 
     [Export(PropertyHint.Range, "0.5,2.0,0.05")]
     public float PointerSensitivity { get; set; } = 1.0f;
@@ -49,6 +51,10 @@ public sealed partial class PlayerInputAdapter : Node
     public bool SquadCommandPressed => Godot.Input.IsActionJustPressed(SquadCommand);
 
     public bool SquadRegroupPressed => Godot.Input.IsActionJustPressed(SquadRegroup);
+
+    public bool TraversePressed => Godot.Input.IsActionJustPressed(Traverse);
+
+    public bool CoverPressed => Godot.Input.IsActionJustPressed(Cover);
 
     public Vector2 AimScreenPosition
     {

@@ -47,9 +47,6 @@ La prueba mueve al protagonista al interior, espera la transición visual y comp
 
 ## Próximo incremento recomendado
 
-Recuperar las mecánicas de traversal del prototipo Unity antes de sumar más contenido:
-vault contextual sobre obstáculos bajos y cobertura alta/baja con desplazamiento
-lateral. `Q` ya pertenece a las órdenes de crew, por lo que conviene conservarlo y usar
-`Espacio` para vault y una tecla contextual distinta para cobertura. Una vez validada
-esa base, el siguiente bloque de contenido debería ser Bar La Niebla y su misión de
-sabotaje.
+Completado en `Stage10TraversalAndCover.md`: vault contextual con `Espacio` y cobertura
+alta/baja con `Alt`, manteniendo `Q` para la crew. El siguiente bloque recomendado es
+Bar La Niebla y su misión de sabotaje.

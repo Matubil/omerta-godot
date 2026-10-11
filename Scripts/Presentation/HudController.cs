@@ -71,18 +71,21 @@ public sealed partial class HudController : CanvasLayer
         }
     }
 
-    public void SetMovementState(bool crouched, bool sprinting)
+    public void SetMovementState(bool crouched, bool sprinting, string context = "")
     {
         if (_stanceLabel is null)
         {
             return;
         }
 
-        _stanceLabel.Text = crouched
+        string stance = crouched
             ? "POSTURA: AGACHADO"
             : sprinting
                 ? "POSTURA: CORRIENDO"
                 : "POSTURA: DE PIE";
+        _stanceLabel.Text = string.IsNullOrWhiteSpace(context)
+            ? stance
+            : $"{stance} · {context}";
     }
 
     public void SetHealth(int current, int maximum)

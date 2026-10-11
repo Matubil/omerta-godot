@@ -34,7 +34,7 @@ public sealed partial class GameBootstrap : Node3D
     {
         GD.Print(
             $"{GameIdentity.CommercialName} [{GameIdentity.TechnicalName}] — " +
-            "Etapas 0 a 6 + navegación compartida");
+            "Etapas 0 a 6 + navegación, cámara y traversal");
         _player = GetTree().GetFirstNodeInGroup("player") as PlayerController;
         _rival = GetTree().GetFirstNodeInGroup("rival") as RivalController;
         _hud = GetTree().GetFirstNodeInGroup("hud") as HudController;
@@ -60,6 +60,7 @@ public sealed partial class GameBootstrap : Node3D
             "Navegación activa: peatones y vehículos usan capas separadas; " +
             "peatones activos aplican evitamiento local.");
         GD.Print("Cámara activa: brazo con colisión y oclusores visuales atenuables.");
+        GD.Print("Traversal activo: vault contextual y cobertura alta/baja.");
     }
 
     public override void _Process(double delta)

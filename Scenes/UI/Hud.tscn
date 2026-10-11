@@ -202,14 +202,14 @@ vertical_alignment = 1
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -310.0
+offset_left = -350.0
 offset_top = 22.0
 offset_right = -22.0
 offset_bottom = 186.0
 grow_horizontal = 0
 theme_override_colors/font_color = Color(0.72, 0.78, 0.8, 1)
 theme_override_font_sizes/font_size = 14
-text = "WASD  MOVER\nSHIFT  CORRER\nCTRL / C  AGACHARSE\nE  INTERACTUAR\nR  RECARGAR\nRMB  ADS · LMB  DISPARAR\nQ  ORDEN CONTEXTUAL · G  REAGRUPAR\nF5  GUARDAR · F9  CARGAR\nF10  DIAGNÓSTICO · T  REINICIAR"
+text = "WASD  MOVER\nSHIFT  CORRER\nCTRL / C  AGACHARSE\nESPACIO  SALTAR OBSTÁCULO\nALT  ENTRAR / SALIR DE COBERTURA\nE  INTERACTUAR · R  RECARGAR\nRMB  ADS · LMB  DISPARAR\nQ  ORDEN CONTEXTUAL · G  REAGRUPAR\nF5  GUARDAR · F9  CARGAR\nF10  DIAGNÓSTICO · T  REINICIAR"
 horizontal_alignment = 2
 
 [node name="Diagnostics" type="Label" parent="."]

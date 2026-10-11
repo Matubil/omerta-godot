@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/Characters/PlayerController.cs" id="1_player"]
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/Interaction/PlayerInteractor.cs" id="2_interactor"]
@@ -6,6 +6,8 @@
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/Combat/HitscanWeaponController.cs" id="4_weapon_controller"]
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/Combat/PlayerCombatController.cs" id="5_player_combat"]
 [ext_resource type="Resource" path="res://Resources/Weapons/PrototypePistol.tres" id="6_pistol"]
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/Characters/PlayerTraversalController.cs" id="7_traversal"]
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/Characters/PlayerCoverController.cs" id="8_cover"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape_player"]
 radius = 0.35
@@ -94,3 +96,9 @@ InitialReserveAmmo = 28
 
 [node name="PlayerCombatController" type="Node" parent="."]
 script = ExtResource("5_player_combat")
+
+[node name="PlayerTraversalController" type="Node" parent="."]
+script = ExtResource("7_traversal")
+
+[node name="PlayerCoverController" type="Node" parent="."]
+script = ExtResource("8_cover")

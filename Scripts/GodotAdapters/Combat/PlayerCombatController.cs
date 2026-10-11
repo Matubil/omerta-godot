@@ -17,6 +17,7 @@ public sealed partial class PlayerCombatController : Node
     private IsometricCameraController? _camera;
     private WorldCursorProjector? _cursor;
     private HudController? _hud;
+    private bool _traversalBlocked;
 
     public bool IsAiming { get; private set; }
 
@@ -54,8 +55,8 @@ public sealed partial class PlayerCombatController : Node
             return;
         }
 
-        SetAiming(_input.IsAiming && !_combatant.IsDefeated);
-        if (_combatant.IsDefeated)
+        SetAiming(_input.IsAiming && !_combatant.IsDefeated && !_traversalBlocked);
+        if (_combatant.IsDefeated || _traversalBlocked)
         {
             return;
         }
@@ -85,6 +86,15 @@ public sealed partial class PlayerCombatController : Node
         _weapon?.RestoreRuntime(magazineAmmo, reserveAmmo);
         SetAiming(false);
         RefreshHud();
+    }
+
+    public void SetTraversalBlocked(bool blocked)
+    {
+        _traversalBlocked = blocked;
+        if (blocked)
+        {
+            SetAiming(false);
+        }
     }
 
     private void SetAiming(bool aiming)

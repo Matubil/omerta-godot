@@ -5,7 +5,7 @@ Reconstrucción en Godot 4.7.2 .NET del vertical slice original de Unity.
 - Nombre técnico y namespace: `Omerta`
 - Lenguaje principal: C#
 - Plataforma inicial: Windows
-- Estado actual: Etapas 0 a 6 + navegación, evitamiento y oclusión de cámara
+- Estado actual: Etapas 0 a 6 + navegación, evitamiento, oclusión, traversal y cobertura
 
 ## Ejecutar
 
@@ -18,6 +18,8 @@ Abrir `project.godot` con la edición .NET de Godot 4.7.2 y ejecutar el proyecto
 | `WASD` | Movimiento relativo a cámara |
 | `Shift` | Sprint |
 | `Ctrl` o `C` | Alternar crouch |
+| `Espacio` | Vault contextual sobre obstáculos bajos |
+| `Alt` | Entrar o salir de cobertura |
 | `E` | Interactuar |
 | Botón derecho | ADS |
 | Botón izquierdo | Disparar |
@@ -53,6 +55,11 @@ La cámara isométrica acorta su brazo frente a paredes para evitar clipping. Lo
 y las grandes fachadas que quedan sobre la línea de visión se atenúan gradualmente y
 recuperan su opacidad cuando dejan de tapar al protagonista.
 
+El protagonista puede entrar en cobertura alta o baja, desplazarse lateralmente sin
+perder el contacto con la superficie y saltar obstáculos bajos cuando existe un
+aterrizaje seguro. El vault cancela ADS y bloquea el arma hasta recuperar la colisión.
+El graybox incluye tres superficies rotuladas para probar estas reglas.
+
 La partida manual se guarda como JSON versionado bajo `user://save_0.json`. Conserva
 pose, salud, munición, economía, propiedad, operatividad y progreso de misión. Tras una
 derrota se restaura el último guardado o el estado inicial si todavía no existe uno;
@@ -81,3 +88,6 @@ El evitamiento y la prueba con 20 NPC están detallados en
 
 La resolución de oclusión de cámara está detallada en
 [`Documentation/Stage09CameraOcclusion.md`](Documentation/Stage09CameraOcclusion.md).
+
+El traversal y la cobertura están detallados en
+[`Documentation/Stage10TraversalAndCover.md`](Documentation/Stage10TraversalAndCover.md).

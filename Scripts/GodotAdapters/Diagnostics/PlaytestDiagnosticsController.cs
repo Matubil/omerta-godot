@@ -27,6 +27,10 @@ public sealed partial class PlaytestDiagnosticsController : Node
     private bool _runNavigationSmokeTest;
     private bool _runCrowdSmokeTest;
     private bool _runCameraSmokeTest;
+    private bool _runTraversalSmokeTest;
+    private int _traversalSmokeStage;
+    private int _traversalSmokeObservationFrames = 90;
+    private float _traversalStartZ;
     private bool _cameraSmokePositioned;
     private int _cameraSmokeObservationFrames = 90;
     private readonly List<NavigationCrowdProbe> _crowdProbes = new();
@@ -61,6 +65,11 @@ public sealed partial class PlaytestDiagnosticsController : Node
             {
                 _runCameraSmokeTest = true;
                 _smokeFramesRemaining = 180;
+            }
+            else if (argument == "--traversal-smoke")
+            {
+                _runTraversalSmokeTest = true;
+                _smokeFramesRemaining = 120;
             }
         }
     }
@@ -99,6 +108,10 @@ public sealed partial class PlaytestDiagnosticsController : Node
         {
             AdvanceCameraOcclusionSmokeTest();
         }
+        else if (_runTraversalSmokeTest)
+        {
+            AdvanceTraversalSmokeTest();
+        }
     }
 
     private void ResolveDependencies()
@@ -125,6 +138,7 @@ public sealed partial class PlaytestDiagnosticsController : Node
             : $"DIAGNÓSTICO ETAPA 6\n" +
               $"FPS {Engine.GetFramesPerSecond()} · NODOS {nodeCount} · FÍSICA {Engine.PhysicsTicksPerSecond} Hz\n" +
               $"JUGADOR {_player.CurrentPlanarSpeed:0.00} m/s · CÁMARA {_camera.CurrentDistance:0.0} m / {_camera.CurrentFieldOfView:0.0}°\n" +
+              $"TRAVERSAL {(_player.IsTraversing ? "VAULT" : _player.IsInCover ? _player.CurrentCoverType.ToString().ToUpperInvariant() : "LIBRE")}\n" +
               $"MISIÓN {_stage.MissionStatus}";
         _hud.SetDiagnostics(text, _visible);
     }
@@ -416,6 +430,72 @@ public sealed partial class PlaytestDiagnosticsController : Node
         finally
         {
             GetTree().Quit(exitCode);
+        }
+    }
+
+    private void AdvanceTraversalSmokeTest()
+    {
+        try
+        {
+            ResolveDependencies();
+            Require(_player is not null, "player for traversal smoke");
+            if (_traversalSmokeStage == 0)
+            {
+                if (--_smokeFramesRemaining > 0)
+                {
+                    return;
+                }
+
+                _player!.GlobalPosition = new Vector3(-5.0f, 0.02f, 11.0f);
+                _player.Velocity = Vector3.Zero;
+                Require(_player.TryEnterCoverForDiagnostics(Vector3.Forward), "high cover entry");
+                Require(_player.CurrentCoverType == CoverType.High, "high cover classification");
+                _player.ExitCoverForDiagnostics();
+
+                _player.GlobalPosition = new Vector3(5.0f, 0.02f, 11.0f);
+                _player.Velocity = Vector3.Zero;
+                Require(_player.TryEnterCoverForDiagnostics(Vector3.Forward), "low cover entry");
+                Require(_player.CurrentCoverType == CoverType.Low, "low cover classification");
+                _traversalStartZ = _player.GlobalPosition.Z;
+                Require(_player.TryVaultForDiagnostics(Vector3.Forward), "vault from low cover");
+                _player.ExitCoverForDiagnostics();
+                Require(_player.IsTraversing, "active vault state");
+                _traversalSmokeStage = 1;
+                return;
+            }
+
+            if (--_traversalSmokeObservationFrames > 0)
+            {
+                return;
+            }
+
+            Require(!_player!.IsTraversing, "completed vault state");
+            Require(_player.GlobalPosition.Z < _traversalStartZ - 1.0f, "vault crossed obstacle");
+            Require(
+                !_player.GetNode<CollisionShape3D>("CollisionShape3D").Disabled,
+                "player collision restored after vault");
+            PlayerTraversalController traversal = _player.GetNode<PlayerTraversalController>(
+                "PlayerTraversalController");
+            PlayerCoverController cover = _player.GetNode<PlayerCoverController>(
+                "PlayerCoverController");
+            Require(Mathf.IsEqualApprox(traversal.MinimumVaultHeight, 0.4f), "Unity minimum vault height parity");
+            Require(Mathf.IsEqualApprox(traversal.MaximumVaultHeight, 1.25f), "Unity maximum vault height parity");
+            Require(Mathf.IsEqualApprox(traversal.VaultDuration, 0.55f), "Unity vault duration parity");
+            Require(Mathf.IsEqualApprox(cover.MovementSpeed, 2.6f), "Unity cover speed parity");
+            Require(Mathf.IsEqualApprox(cover.DetectionDistance, 1.35f), "Unity cover probe parity");
+
+            GD.Print(
+                $"Traversal smoke passed: high/low cover classification, cover entry and " +
+                $"vault completion verified ({_traversalStartZ - _player.GlobalPosition.Z:0.00} m crossed)."
+            );
+            _runTraversalSmokeTest = false;
+            GetTree().Quit(0);
+        }
+        catch (Exception exception)
+        {
+            _runTraversalSmokeTest = false;
+            GD.PushError($"Traversal smoke failed: {exception}");
+            GetTree().Quit(1);
         }
     }
 
