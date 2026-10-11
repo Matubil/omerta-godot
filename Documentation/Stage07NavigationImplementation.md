@@ -58,12 +58,11 @@ multitudes.
 
 - La malla está construida para el bloque graybox actual; la ciudad futura deberá
   generarla a partir de su geometría definitiva.
-- El evitamiento local entre agentes todavía no está activado.
+- El incremento siguiente incorporó evitamiento local y una prueba con 20 agentes;
+  véase `Stage08CrowdAvoidance.md`.
 - La carga gradual mide consultas de ruta, no percepción, combate y renderizado de una
   multitud real.
 - Los aliados esperan fuera cuando el protagonista entra a un interior desconectado.
 
-El siguiente incremento recomendado es habilitar evitamiento local y crear un escenario
-de estrés reproducible con 20 NPC activos. Después de estabilizarlo conviene sumar el
-segundo negocio y ampliar la ciudad, sin multiplicar contenido sobre una navegación no
-probada.
+La base de rutas quedó estabilizada antes de ampliar contenido. El siguiente riesgo a
+resolver es la oclusión de cámara en edificios altos y techos.

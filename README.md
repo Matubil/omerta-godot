@@ -5,7 +5,7 @@ Reconstrucción en Godot 4.7.2 .NET del vertical slice original de Unity.
 - Nombre técnico y namespace: `Omerta`
 - Lenguaje principal: C#
 - Plataforma inicial: Windows
-- Estado actual: Etapas 0 a 6 del plan de migración + navegación compartida
+- Estado actual: Etapas 0 a 6 + navegación compartida y evitamiento local
 
 ## Ejecutar
 
@@ -46,7 +46,8 @@ puede sabotear el taller, pero nunca transferir su propiedad.
 Compañeros, rivales, agentes, atacantes y vehículos ya calculan rutas sobre una malla
 compartida. Peatones y vehículos usan capas separadas para que el patrullero y los
 refuerzos respeten el trazado de calles mientras la IA a pie rodea la geometría del
-bloque.
+bloque. Los peatones activos también se apartan entre sí mediante evitamiento local;
+los actores desactivados salen de la simulación para no consumir procesamiento.
 
 La partida manual se guarda como JSON versionado bajo `user://save_0.json`. Conserva
 pose, salud, munición, economía, propiedad, operatividad y progreso de misión. Tras una
@@ -70,3 +71,6 @@ La evaluación técnica y la recomendación de migración están en
 
 La base de navegación posterior a la Etapa 6 está detallada en
 [`Documentation/Stage07NavigationImplementation.md`](Documentation/Stage07NavigationImplementation.md).
+
+El evitamiento y la prueba con 20 NPC están detallados en
+[`Documentation/Stage08CrowdAvoidance.md`](Documentation/Stage08CrowdAvoidance.md).

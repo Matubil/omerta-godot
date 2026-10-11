@@ -56,7 +56,9 @@ public sealed partial class GameBootstrap : Node3D
         _rivalRotation = _rival.Rotation;
         _playerCombatant.Defeated += OnPlayerDefeated;
         GD.Print("Etapa 6 activa: vertical slice consolidado y listo para evaluación.");
-        GD.Print("Navegación activa: peatones y vehículos usan capas y rutas separadas.");
+        GD.Print(
+            "Navegación activa: peatones y vehículos usan capas separadas; " +
+            "peatones activos aplican evitamiento local.");
     }
 
     public override void _Process(double delta)

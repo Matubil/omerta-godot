@@ -40,6 +40,7 @@ public sealed partial class RivalController : CharacterBody3D
     private Node3D? _visual;
     private HudController? _hud;
     private NavigationAgent3D? _navigation;
+    private NavigationAvoidanceMotor? _avoidance;
     private Vector3 _lastKnownPosition;
     private bool _hasLastKnownPosition;
     private double _nextDecisionTime;
@@ -58,6 +59,7 @@ public sealed partial class RivalController : CharacterBody3D
         _weapon = GetNode<HitscanWeaponController>("WeaponController");
         _visual = GetNode<Node3D>("Visual");
         _navigation = GetNode<NavigationAgent3D>("NavigationAgent3D");
+        _avoidance = new NavigationAvoidanceMotor(_navigation, MovementSpeed);
         _hud = GetTree().GetFirstNodeInGroup("hud") as HudController;
         _combatant.Damaged += OnDamaged;
         _combatant.Defeated += OnDefeated;
@@ -67,13 +69,13 @@ public sealed partial class RivalController : CharacterBody3D
 
     public override void _ExitTree()
     {
-        if (_combatant is null)
+        if (_combatant is not null)
         {
-            return;
+            _combatant.Damaged -= OnDamaged;
+            _combatant.Defeated -= OnDefeated;
         }
 
-        _combatant.Damaged -= OnDamaged;
-        _combatant.Defeated -= OnDefeated;
+        _avoidance?.Dispose();
     }
 
     public override void _PhysicsProcess(double delta)
@@ -87,6 +89,7 @@ public sealed partial class RivalController : CharacterBody3D
 
         if (_combatant.IsDefeated || _target.IsDefeated)
         {
+            _avoidance?.ResolveVelocity(Vector3.Zero);
             Velocity = Vector3.Zero;
             UpdateHud();
             return;
@@ -130,6 +133,8 @@ public sealed partial class RivalController : CharacterBody3D
             }
         }
 
+        horizontalVelocity = _avoidance?.ResolveVelocity(horizontalVelocity) ?? horizontalVelocity;
+
         Vector3 velocity = Velocity;
         velocity.X = horizontalVelocity.X;
         velocity.Z = horizontalVelocity.Z;
@@ -154,6 +159,7 @@ public sealed partial class RivalController : CharacterBody3D
         {
             _navigation.TargetPosition = position;
         }
+        _avoidance?.ResetAfterTeleport();
         if (_visual is not null)
         {
             _visual.Rotation = Vector3.Zero;
@@ -232,6 +238,7 @@ public sealed partial class RivalController : CharacterBody3D
 
     private void OnDefeated(DamageInfo damage)
     {
+        _avoidance?.ResolveVelocity(Vector3.Zero);
         Velocity = Vector3.Zero;
         if (_visual is not null)
         {

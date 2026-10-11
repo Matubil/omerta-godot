@@ -36,6 +36,7 @@ public sealed partial class SquadCompanionController : CharacterBody3D
     private double _nextDecisionTime;
     private CollisionShape3D? _collision;
     private NavigationAgent3D? _navigation;
+    private NavigationAvoidanceMotor? _avoidance;
 
     public SquadCompanionOrder CurrentOrder { get; private set; } = SquadCompanionOrder.Follow;
 
@@ -49,6 +50,7 @@ public sealed partial class SquadCompanionController : CharacterBody3D
         _weapon = GetNode<HitscanWeaponController>("WeaponController");
         _collision = GetNode<CollisionShape3D>("CollisionShape3D");
         _navigation = GetNode<NavigationAgent3D>("NavigationAgent3D");
+        _avoidance = new NavigationAvoidanceMotor(_navigation, MovementSpeed, false);
         _leader = GetTree().GetFirstNodeInGroup("player") as Node3D;
         if (StartsActive)
         {
@@ -60,10 +62,13 @@ public sealed partial class SquadCompanionController : CharacterBody3D
         }
     }
 
+    public override void _ExitTree() => _avoidance?.Dispose();
+
     public override void _PhysicsProcess(double delta)
     {
         if (!IsActive || _combatant?.IsDefeated != false)
         {
+            _avoidance?.ResolveVelocity(Vector3.Zero);
             Velocity = Vector3.Zero;
             return;
         }
@@ -113,6 +118,12 @@ public sealed partial class SquadCompanionController : CharacterBody3D
             velocity.Z = 0.0f;
         }
 
+        Vector3 safeVelocity = _avoidance?.ResolveVelocity(
+            new Vector3(velocity.X, 0.0f, velocity.Z)) ??
+            new Vector3(velocity.X, 0.0f, velocity.Z);
+        velocity.X = safeVelocity.X;
+        velocity.Z = safeVelocity.Z;
+
         velocity.Y = IsOnFloor() ? -0.5f : velocity.Y - 20.0f * (float)delta;
         Velocity = velocity;
         MoveAndSlide();
@@ -133,6 +144,8 @@ public sealed partial class SquadCompanionController : CharacterBody3D
             _navigation.TargetPosition = position;
         }
 
+        _avoidance?.SetActive(true);
+
         Regroup();
     }
 
@@ -141,6 +154,7 @@ public sealed partial class SquadCompanionController : CharacterBody3D
         IsActive = false;
         Visible = false;
         Velocity = Vector3.Zero;
+        _avoidance?.SetActive(false);
         RemoveFromGroup("companion");
         _collision?.SetDeferred(CollisionShape3D.PropertyName.Disabled, true);
         ProcessMode = ProcessModeEnum.Disabled;

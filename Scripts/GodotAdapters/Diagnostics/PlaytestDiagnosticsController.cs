@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Godot;
 using Omerta.GodotAdapters.Businesses;
 using Omerta.GodotAdapters.Camera;
@@ -24,6 +25,12 @@ public sealed partial class PlaytestDiagnosticsController : Node
     private bool _visible;
     private bool _runSmokeTest;
     private bool _runNavigationSmokeTest;
+    private bool _runCrowdSmokeTest;
+    private readonly List<NavigationCrowdProbe> _crowdProbes = new();
+    private bool _crowdSpawned;
+    private int _crowdFramesRemaining = 480;
+    private float _minimumCrowdDistance = float.MaxValue;
+    private ulong _crowdStartedAt;
     private int _smokeFramesRemaining = 120;
     private float _refreshRemaining;
 
@@ -40,6 +47,11 @@ public sealed partial class PlaytestDiagnosticsController : Node
             else if (argument == "--navigation-smoke")
             {
                 _runNavigationSmokeTest = true;
+                _smokeFramesRemaining = 180;
+            }
+            else if (argument == "--crowd-smoke")
+            {
+                _runCrowdSmokeTest = true;
                 _smokeFramesRemaining = 180;
             }
         }
@@ -70,6 +82,10 @@ public sealed partial class PlaytestDiagnosticsController : Node
         {
             _runNavigationSmokeTest = false;
             RunNavigationSmokeTest();
+        }
+        else if (_runCrowdSmokeTest)
+        {
+            AdvanceCrowdSmokeTest();
         }
     }
 
@@ -211,6 +227,157 @@ public sealed partial class PlaytestDiagnosticsController : Node
         {
             GetTree().Quit(exitCode);
         }
+    }
+
+    private void AdvanceCrowdSmokeTest()
+    {
+        if (!_crowdSpawned)
+        {
+            if (--_smokeFramesRemaining > 0)
+            {
+                return;
+            }
+
+            try
+            {
+                ResolveDependencies();
+                Require(_navigation?.IsSynchronized == true, "synchronized navigation map");
+                RequireProductionAvoidanceConfiguration();
+                Node scene = GetTree().CurrentScene ?? throw new InvalidOperationException(
+                    "The current scene is unavailable for the crowd smoke test.");
+                for (int lane = 0; lane < 10; lane++)
+                {
+                    float z = 2.5f + lane * 2.2f;
+                    AddCrowdProbe(
+                        scene,
+                        new Vector3(-8.0f, 0.05f, z),
+                        new Vector3(8.0f, 0.05f, z));
+                    AddCrowdProbe(
+                        scene,
+                        new Vector3(8.0f, 0.05f, z),
+                        new Vector3(-8.0f, 0.05f, z));
+                }
+
+                _crowdStartedAt = Time.GetTicksMsec();
+                _crowdSpawned = true;
+                GD.Print("Crowd smoke started: 20 active pedestrian navigation agents.");
+            }
+            catch (Exception exception)
+            {
+                FinishCrowdSmokeTest(exception);
+            }
+
+            return;
+        }
+
+        _minimumCrowdDistance = Mathf.Min(_minimumCrowdDistance, GetMinimumCrowdDistance());
+        if (--_crowdFramesRemaining > 0)
+        {
+            return;
+        }
+
+        try
+        {
+            Require(_crowdProbes.Count == 20, "20 crowd probes");
+            int safeVelocitySamples = 0;
+            int deflectionSamples = 0;
+            float distanceTravelled = 0.0f;
+            foreach (NavigationCrowdProbe probe in _crowdProbes)
+            {
+                Require(
+                    probe.SafeVelocitySamples >= 120,
+                    $"avoidance callbacks for {probe.Name} " +
+                    $"(received {probe.SafeVelocitySamples})");
+                safeVelocitySamples += probe.SafeVelocitySamples;
+                deflectionSamples += probe.DeflectionSamples;
+                distanceTravelled += probe.DistanceTravelled;
+            }
+
+            Require(deflectionSamples > 0, "at least one avoidance correction");
+            Require(distanceTravelled >= 100.0f, "crowd movement under load");
+            Require(_minimumCrowdDistance >= 0.35f, "crowd separation");
+            double elapsedSeconds = (Time.GetTicksMsec() - _crowdStartedAt) / 1000.0;
+            int nodeCount = (int)Performance.GetMonitor(Performance.Monitor.ObjectNodeCount);
+            GD.Print(
+                $"Crowd smoke passed: 20 active NPC probes, {safeVelocitySamples} safe-velocity " +
+                $"callbacks, {deflectionSamples} avoidance corrections and " +
+                $"{distanceTravelled:0.0} m travelled in {elapsedSeconds:0.00} s " +
+                $"(minimum separation {_minimumCrowdDistance:0.00} m, {nodeCount} nodes, " +
+                $"{Engine.GetFramesPerSecond()} FPS reported).");
+            FinishCrowdSmokeTest();
+        }
+        catch (Exception exception)
+        {
+            FinishCrowdSmokeTest(exception);
+        }
+    }
+
+    private void AddCrowdProbe(Node parent, Vector3 start, Vector3 destination)
+    {
+        NavigationCrowdProbe probe = new()
+        {
+            Name = $"CrowdProbe{_crowdProbes.Count + 1:00}"
+        };
+        probe.Configure(start, destination, 2.4f);
+        parent.AddChild(probe);
+        _crowdProbes.Add(probe);
+    }
+
+    private void RequireProductionAvoidanceConfiguration()
+    {
+        Godot.Collections.Array<Node> companions = GetTree().GetNodesInGroup("companion");
+        Require(companions.Count == 1, "one active companion for avoidance validation");
+        Require(
+            companions[0].GetNode<NavigationAgent3D>("NavigationAgent3D").AvoidanceEnabled,
+            "active companion avoidance");
+
+        foreach (Node reserve in GetTree().GetNodesInGroup("reserve_companion"))
+        {
+            Require(
+                !reserve.GetNode<NavigationAgent3D>("NavigationAgent3D").AvoidanceEnabled,
+                $"inactive reserve avoidance for {reserve.Name}");
+        }
+
+        Node? rival = GetTree().GetFirstNodeInGroup("rival");
+        Require(
+            rival?.GetNode<NavigationAgent3D>("NavigationAgent3D").AvoidanceEnabled == true,
+            "active rival avoidance");
+        Require(
+            _stage?.GetNode<NavigationAgent3D>("PoliceOfficer/NavigationAgent3D")
+                .AvoidanceEnabled == false,
+            "inactive police avoidance");
+        Require(
+            _stage?.GetNode<NavigationAgent3D>("Counterattacker/NavigationAgent3D")
+                .AvoidanceEnabled == false,
+            "inactive counterattacker avoidance");
+    }
+
+    private float GetMinimumCrowdDistance()
+    {
+        float minimum = float.MaxValue;
+        for (int first = 0; first < _crowdProbes.Count; first++)
+        {
+            for (int second = first + 1; second < _crowdProbes.Count; second++)
+            {
+                Vector3 offset = _crowdProbes[first].GlobalPosition -
+                    _crowdProbes[second].GlobalPosition;
+                offset.Y = 0.0f;
+                minimum = Mathf.Min(minimum, offset.Length());
+            }
+        }
+
+        return minimum;
+    }
+
+    private void FinishCrowdSmokeTest(Exception? exception = null)
+    {
+        _runCrowdSmokeTest = false;
+        if (exception is not null)
+        {
+            GD.PushError($"Crowd smoke failed: {exception}");
+        }
+
+        GetTree().Quit(exception is null ? 0 : 1);
     }
 
     private static void Require(bool condition, string requirement)

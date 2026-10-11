@@ -26,6 +26,7 @@ public sealed partial class PoliceOfficerController : CharacterBody3D
     private CollisionShape3D? _collision;
     private Node3D? _visual;
     private NavigationAgent3D? _navigation;
+    private NavigationAvoidanceMotor? _avoidance;
     private Vector3 _lastKnownPosition;
     private double _nextDecisionTime;
 
@@ -42,6 +43,7 @@ public sealed partial class PoliceOfficerController : CharacterBody3D
         _collision = GetNode<CollisionShape3D>("CollisionShape3D");
         _visual = GetNode<Node3D>("Visual");
         _navigation = GetNode<NavigationAgent3D>("NavigationAgent3D");
+        _avoidance = new NavigationAvoidanceMotor(_navigation, MovementSpeed, false);
         _combatant.Defeated += OnDefeated;
         Deactivate();
     }
@@ -52,12 +54,15 @@ public sealed partial class PoliceOfficerController : CharacterBody3D
         {
             _combatant.Defeated -= OnDefeated;
         }
+
+        _avoidance?.Dispose();
     }
 
     public override void _PhysicsProcess(double delta)
     {
         if (!IsActive || _combatant?.IsDefeated != false)
         {
+            _avoidance?.ResolveVelocity(Vector3.Zero);
             Velocity = Vector3.Zero;
             return;
         }
@@ -82,6 +87,8 @@ public sealed partial class PoliceOfficerController : CharacterBody3D
         {
             horizontalVelocity = direction.Normalized() * MovementSpeed;
         }
+
+        horizontalVelocity = _avoidance?.ResolveVelocity(horizontalVelocity) ?? horizontalVelocity;
 
         if (direction.LengthSquared() > 0.001f)
         {
@@ -119,6 +126,8 @@ public sealed partial class PoliceOfficerController : CharacterBody3D
             _navigation.TargetPosition = lastKnownPosition;
         }
 
+        _avoidance?.SetActive(true);
+
         if (_visual is not null)
         {
             _visual.Rotation = Vector3.Zero;
@@ -133,6 +142,7 @@ public sealed partial class PoliceOfficerController : CharacterBody3D
         HasPlayerLineOfSight = false;
         Visible = false;
         Velocity = Vector3.Zero;
+        _avoidance?.SetActive(false);
         RemoveFromGroup("hostile");
         _collision?.SetDeferred(CollisionShape3D.PropertyName.Disabled, true);
         ProcessMode = ProcessModeEnum.Disabled;
@@ -192,6 +202,7 @@ public sealed partial class PoliceOfficerController : CharacterBody3D
 
     private void OnDefeated(DamageInfo damage)
     {
+        _avoidance?.ResolveVelocity(Vector3.Zero);
         Velocity = Vector3.Zero;
         HasPlayerLineOfSight = false;
         if (_visual is not null)
