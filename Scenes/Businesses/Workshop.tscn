@@ -94,7 +94,7 @@ shape = SubResource("UnitBoxShape")
 [node name="BackWall" type="StaticBody3D" parent="Exterior"]
 position = Vector3(0, 1.5, -15)
 scale = Vector3(10, 3, 0.35)
-collision_layer = 1
+collision_layer = 5
 
 [node name="Mesh" type="MeshInstance3D" parent="Exterior/BackWall"]
 mesh = SubResource("UnitWallMesh")
@@ -105,7 +105,7 @@ shape = SubResource("UnitBoxShape")
 [node name="LeftWall" type="StaticBody3D" parent="Exterior"]
 position = Vector3(-5, 1.5, -10)
 scale = Vector3(0.35, 3, 10)
-collision_layer = 1
+collision_layer = 5
 
 [node name="Mesh" type="MeshInstance3D" parent="Exterior/LeftWall"]
 mesh = SubResource("UnitWallMesh")
@@ -116,7 +116,7 @@ shape = SubResource("UnitBoxShape")
 [node name="RightWall" type="StaticBody3D" parent="Exterior"]
 position = Vector3(5, 1.5, -10)
 scale = Vector3(0.35, 3, 10)
-collision_layer = 1
+collision_layer = 5
 
 [node name="Mesh" type="MeshInstance3D" parent="Exterior/RightWall"]
 mesh = SubResource("UnitWallMesh")
@@ -127,7 +127,7 @@ shape = SubResource("UnitBoxShape")
 [node name="FrontWallLeft" type="StaticBody3D" parent="Exterior"]
 position = Vector3(-3.5, 1.5, -5)
 scale = Vector3(3, 3, 0.35)
-collision_layer = 1
+collision_layer = 5
 
 [node name="Mesh" type="MeshInstance3D" parent="Exterior/FrontWallLeft"]
 mesh = SubResource("UnitWallMesh")
@@ -138,12 +138,24 @@ shape = SubResource("UnitBoxShape")
 [node name="FrontWallRight" type="StaticBody3D" parent="Exterior"]
 position = Vector3(3.5, 1.5, -5)
 scale = Vector3(3, 3, 0.35)
-collision_layer = 1
+collision_layer = 5
 
 [node name="Mesh" type="MeshInstance3D" parent="Exterior/FrontWallRight"]
 mesh = SubResource("UnitWallMesh")
 
 [node name="Collision" type="CollisionShape3D" parent="Exterior/FrontWallRight"]
+shape = SubResource("UnitBoxShape")
+
+[node name="Roof" type="StaticBody3D" parent="Exterior" groups=["camera_fade_occluder"]]
+position = Vector3(0, 3.1, -10)
+scale = Vector3(10, 0.2, 10)
+collision_layer = 8
+collision_mask = 0
+
+[node name="Mesh" type="MeshInstance3D" parent="Exterior/Roof"]
+mesh = SubResource("UnitWallMesh")
+
+[node name="Collision" type="CollisionShape3D" parent="Exterior/Roof"]
 shape = SubResource("UnitBoxShape")
 
 [node name="Entrance" type="Area3D" parent="Exterior"]
@@ -180,7 +192,7 @@ shape = SubResource("UnitBoxShape")
 [node name="BackWall" type="StaticBody3D" parent="Interior"]
 position = Vector3(0, 1.5, -5)
 scale = Vector3(10, 3, 0.35)
-collision_layer = 1
+collision_layer = 5
 
 [node name="Mesh" type="MeshInstance3D" parent="Interior/BackWall"]
 mesh = SubResource("UnitWallMesh")
@@ -191,7 +203,7 @@ shape = SubResource("UnitBoxShape")
 [node name="LeftWall" type="StaticBody3D" parent="Interior"]
 position = Vector3(-5, 1.5, 0)
 scale = Vector3(0.35, 3, 10)
-collision_layer = 1
+collision_layer = 5
 
 [node name="Mesh" type="MeshInstance3D" parent="Interior/LeftWall"]
 mesh = SubResource("UnitWallMesh")
@@ -202,12 +214,24 @@ shape = SubResource("UnitBoxShape")
 [node name="RightWall" type="StaticBody3D" parent="Interior"]
 position = Vector3(5, 1.5, 0)
 scale = Vector3(0.35, 3, 10)
-collision_layer = 1
+collision_layer = 5
 
 [node name="Mesh" type="MeshInstance3D" parent="Interior/RightWall"]
 mesh = SubResource("UnitWallMesh")
 
 [node name="Collision" type="CollisionShape3D" parent="Interior/RightWall"]
+shape = SubResource("UnitBoxShape")
+
+[node name="Roof" type="StaticBody3D" parent="Interior" groups=["camera_fade_occluder"]]
+position = Vector3(0, 3.1, 0)
+scale = Vector3(10, 0.2, 10)
+collision_layer = 8
+collision_mask = 0
+
+[node name="Mesh" type="MeshInstance3D" parent="Interior/Roof"]
+mesh = SubResource("UnitWallMesh")
+
+[node name="Collision" type="CollisionShape3D" parent="Interior/Roof"]
 shape = SubResource("UnitBoxShape")
 
 [node name="Merchant" type="StaticBody3D" parent="Interior"]

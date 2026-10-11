@@ -59,6 +59,7 @@ public sealed partial class GameBootstrap : Node3D
         GD.Print(
             "Navegación activa: peatones y vehículos usan capas separadas; " +
             "peatones activos aplican evitamiento local.");
+        GD.Print("Cámara activa: brazo con colisión y oclusores visuales atenuables.");
     }
 
     public override void _Process(double delta)

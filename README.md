@@ -5,7 +5,7 @@ Reconstrucción en Godot 4.7.2 .NET del vertical slice original de Unity.
 - Nombre técnico y namespace: `Omerta`
 - Lenguaje principal: C#
 - Plataforma inicial: Windows
-- Estado actual: Etapas 0 a 6 + navegación compartida y evitamiento local
+- Estado actual: Etapas 0 a 6 + navegación, evitamiento y oclusión de cámara
 
 ## Ejecutar
 
@@ -49,6 +49,10 @@ refuerzos respeten el trazado de calles mientras la IA a pie rodea la geometría
 bloque. Los peatones activos también se apartan entre sí mediante evitamiento local;
 los actores desactivados salen de la simulación para no consumir procesamiento.
 
+La cámara isométrica acorta su brazo frente a paredes para evitar clipping. Los techos
+y las grandes fachadas que quedan sobre la línea de visión se atenúan gradualmente y
+recuperan su opacidad cuando dejan de tapar al protagonista.
+
 La partida manual se guarda como JSON versionado bajo `user://save_0.json`. Conserva
 pose, salud, munición, economía, propiedad, operatividad y progreso de misión. Tras una
 derrota se restaura el último guardado o el estado inicial si todavía no existe uno;
@@ -74,3 +78,6 @@ La base de navegación posterior a la Etapa 6 está detallada en
 
 El evitamiento y la prueba con 20 NPC están detallados en
 [`Documentation/Stage08CrowdAvoidance.md`](Documentation/Stage08CrowdAvoidance.md).
+
+La resolución de oclusión de cámara está detallada en
+[`Documentation/Stage09CameraOcclusion.md`](Documentation/Stage09CameraOcclusion.md).

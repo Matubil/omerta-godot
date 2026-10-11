@@ -47,7 +47,6 @@ gráfico final.
 
 ## Próximo incremento recomendado
 
-Implementar oclusión de cámara isométrica: acortar el brazo contra geometría y atenuar
-techos o fachadas que tapen al protagonista. Conviene resolverlo antes de ampliar la
-ciudad o sumar edificios más altos. Después puede incorporarse el segundo negocio y su
-misión reutilizando la arquitectura ya estabilizada.
+La oclusión de cámara se completó en el incremento siguiente; véase
+`Stage09CameraOcclusion.md`. Con navegación, multitudes y lectura visual estabilizadas,
+el próximo riesgo jugable es recuperar traversal y cobertura antes de ampliar contenido.

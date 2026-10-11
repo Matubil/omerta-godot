@@ -26,6 +26,9 @@ public sealed partial class PlaytestDiagnosticsController : Node
     private bool _runSmokeTest;
     private bool _runNavigationSmokeTest;
     private bool _runCrowdSmokeTest;
+    private bool _runCameraSmokeTest;
+    private bool _cameraSmokePositioned;
+    private int _cameraSmokeObservationFrames = 90;
     private readonly List<NavigationCrowdProbe> _crowdProbes = new();
     private bool _crowdSpawned;
     private int _crowdFramesRemaining = 480;
@@ -52,6 +55,11 @@ public sealed partial class PlaytestDiagnosticsController : Node
             else if (argument == "--crowd-smoke")
             {
                 _runCrowdSmokeTest = true;
+                _smokeFramesRemaining = 180;
+            }
+            else if (argument == "--camera-occlusion-smoke")
+            {
+                _runCameraSmokeTest = true;
                 _smokeFramesRemaining = 180;
             }
         }
@@ -86,6 +94,10 @@ public sealed partial class PlaytestDiagnosticsController : Node
         else if (_runCrowdSmokeTest)
         {
             AdvanceCrowdSmokeTest();
+        }
+        else if (_runCameraSmokeTest)
+        {
+            AdvanceCameraOcclusionSmokeTest();
         }
     }
 
@@ -309,6 +321,101 @@ public sealed partial class PlaytestDiagnosticsController : Node
         catch (Exception exception)
         {
             FinishCrowdSmokeTest(exception);
+        }
+    }
+
+    private void AdvanceCameraOcclusionSmokeTest()
+    {
+        if (!_cameraSmokePositioned)
+        {
+            if (--_smokeFramesRemaining > 0)
+            {
+                return;
+            }
+
+            ResolveDependencies();
+            if (_player is null)
+            {
+                GD.PushError("Camera occlusion smoke failed: player is unavailable.");
+                GetTree().Quit(1);
+                return;
+            }
+
+            _player.GlobalPosition = new Vector3(50.0f, 0.25f, 0.0f);
+            _cameraSmokePositioned = true;
+            return;
+        }
+
+        if (--_cameraSmokeObservationFrames > 0)
+        {
+            return;
+        }
+
+        _runCameraSmokeTest = false;
+        RunCameraOcclusionSmokeTest();
+    }
+
+    private void RunCameraOcclusionSmokeTest()
+    {
+        int exitCode = 1;
+        try
+        {
+            ResolveDependencies();
+            Require(_camera is not null, "isometric camera controller");
+            Require(_workshop is not null, "workshop for roof fade validation");
+            Require(
+                GetTree().GetNodesInGroup("camera_fade_occluder").Count == 4,
+                "two building and two roof fade occluders");
+            Require(_camera!.FadedGeometryCount >= 1, "runtime roof fade selection");
+            MeshInstance3D interiorRoof = _workshop!.GetNode<MeshInstance3D>(
+                "Interior/Roof/Mesh");
+            Require(interiorRoof.Transparency >= 0.5f, "runtime roof transparency");
+
+            CameraOcclusionProbe wallProbe = _camera.ProbeOcclusion(
+                new Vector3(50.0f, 1.0f, 0.0f),
+                new Vector3(50.0f, 1.0f, -10.0f));
+            Require(wallProbe.HasCollision, "interior wall camera collision");
+            Require(
+                wallProbe.LimitedDistance < wallProbe.RequestedDistance - 1.0f,
+                "camera arm shortening");
+
+            CameraOcclusionProbe closeWallProbe = _camera.ProbeOcclusion(
+                new Vector3(50.0f, 1.0f, -4.3f),
+                new Vector3(50.0f, 1.0f, -10.0f));
+            Require(closeWallProbe.HasCollision, "close wall camera collision");
+            Require(
+                closeWallProbe.LimitedDistance <= 0.11f,
+                "close wall clipping prevention");
+
+            CameraOcclusionProbe roofProbe = _camera.ProbeOcclusion(
+                new Vector3(50.0f, 1.0f, 0.0f),
+                new Vector3(50.0f, 10.0f, 0.0f));
+            Require(roofProbe.FadeOccluderCount >= 1, "interior roof fading");
+
+            CameraOcclusionProbe buildingProbe = _camera.ProbeOcclusion(
+                new Vector3(10.0f, 2.0f, 7.0f),
+                new Vector3(20.0f, 2.0f, 7.0f));
+            Require(buildingProbe.FadeOccluderCount >= 1, "city building fading");
+
+            CameraOcclusionProbe clearProbe = _camera.ProbeOcclusion(
+                new Vector3(30.0f, 1.0f, 30.0f),
+                new Vector3(30.0f, 10.0f, 40.0f));
+            Require(!clearProbe.HasCollision, "clear camera arm");
+            Require(clearProbe.FadeOccluderCount == 0, "clear camera sightline");
+
+            GD.Print(
+                $"Camera occlusion smoke passed: arm shortened from " +
+                $"{wallProbe.RequestedDistance:0.00} m to {wallProbe.LimitedDistance:0.00} m, " +
+                $"roof/building fade layers detected and clear sightline preserved.");
+            exitCode = 0;
+        }
+        catch (Exception exception)
+        {
+            GD.PushError($"Camera occlusion smoke failed: {exception}");
+        }
+        finally
+        {
+            GetTree().Quit(exitCode);
         }
     }
 

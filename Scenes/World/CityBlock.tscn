@@ -65,10 +65,10 @@ mesh = SubResource("UnitBoxMesh")
 [node name="Collision" type="CollisionShape3D" parent="SidewalkEast"]
 shape = SubResource("UnitBoxShape")
 
-[node name="BuildingWest" type="StaticBody3D" parent="."]
+[node name="BuildingWest" type="StaticBody3D" parent="." groups=["camera_fade_occluder"]]
 position = Vector3(-15, 2, 2)
 scale = Vector3(8, 4, 30)
-collision_layer = 1
+collision_layer = 9
 
 [node name="Mesh" type="MeshInstance3D" parent="BuildingWest"]
 mesh = SubResource("BuildingMesh")
@@ -76,10 +76,10 @@ mesh = SubResource("BuildingMesh")
 [node name="Collision" type="CollisionShape3D" parent="BuildingWest"]
 shape = SubResource("UnitBoxShape")
 
-[node name="BuildingEast" type="StaticBody3D" parent="."]
+[node name="BuildingEast" type="StaticBody3D" parent="." groups=["camera_fade_occluder"]]
 position = Vector3(15, 2, 7)
 scale = Vector3(8, 4, 20)
-collision_layer = 1
+collision_layer = 9
 
 [node name="Mesh" type="MeshInstance3D" parent="BuildingEast"]
 mesh = SubResource("BuildingMesh")
