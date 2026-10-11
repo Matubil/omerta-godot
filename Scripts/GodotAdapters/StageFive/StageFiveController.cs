@@ -89,6 +89,13 @@ public sealed partial class StageFiveController : Node3D
 
     public string PoliceBribePrompt => $"Sobornar al agente (${PoliceBribeCost})";
 
+    public PropertyTakeoverMissionStatus MissionStatus =>
+        _mission?.Status ?? PropertyTakeoverMissionStatus.Available;
+
+    public bool HasRequiredRuntimeActors => _witness is not null && _policeOfficer is not null &&
+        _counterattacker is not null && _policeVehicle is not null && _reinforcements is not null &&
+        _squad is not null;
+
     public override void _Ready()
     {
         AddToGroup("stage_five");
@@ -318,6 +325,38 @@ public sealed partial class StageFiveController : Node3D
         _witness?.ResetWitness();
         _mission?.RestoreProgress(PropertyTakeoverMissionStatus.Available, false);
         RefreshHud();
+    }
+
+    public bool TryGetMissionObjective(out Vector3 position, out string label)
+    {
+        position = Vector3.Zero;
+        label = string.Empty;
+        if (_mission is null)
+        {
+            return false;
+        }
+
+        switch (_mission.Status)
+        {
+            case PropertyTakeoverMissionStatus.Available:
+            case PropertyTakeoverMissionStatus.Failed:
+                position = GetNode<Node3D>("Contact").GlobalPosition;
+                label = "DON VITTORIO";
+                return true;
+            case PropertyTakeoverMissionStatus.ReachProperty:
+            case PropertyTakeoverMissionStatus.TakeControl:
+                position = MissionArrivalPoint;
+                label = "TALLER EL FARO";
+                return true;
+            case PropertyTakeoverMissionStatus.ResolvePoliceResponse:
+                position = _policeOfficer?.IsActive == true
+                    ? _policeOfficer.GlobalPosition
+                    : _policeVehicle?.GlobalPosition ?? _lastKnownPlayerPosition;
+                label = "RESPUESTA POLICIAL";
+                return true;
+            default:
+                return false;
+        }
     }
 
     private void AdvancePolice(float deltaSeconds)

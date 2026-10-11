@@ -45,6 +45,10 @@ public sealed partial class IsometricCameraController : Node3D
 
     public Camera3D? Camera => _camera;
 
+    public float CurrentDistance => _currentDistance;
+
+    public float CurrentFieldOfView => _currentFieldOfView;
+
     public override void _Ready()
     {
         AddToGroup("camera_rig");

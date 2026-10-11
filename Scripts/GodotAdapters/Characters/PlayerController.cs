@@ -48,6 +48,8 @@ public sealed partial class PlayerController : CharacterBody3D
 
     public bool IsCrouched => _isCrouched;
 
+    public float CurrentPlanarSpeed => new Vector2(Velocity.X, Velocity.Z).Length();
+
     public override void _Ready()
     {
         AddToGroup("player");

@@ -5,7 +5,7 @@ Reconstrucción en Godot 4.7.2 .NET del vertical slice original de Unity.
 - Nombre técnico y namespace: `Omerta`
 - Lenguaje principal: C#
 - Plataforma inicial: Windows
-- Estado actual: Etapas 0 a 5 del plan de migración
+- Estado actual: Etapas 0 a 6 del plan de migración
 
 ## Ejecutar
 
@@ -26,6 +26,7 @@ Abrir `project.godot` con la edición .NET de Godot 4.7.2 y ejecutar el proyecto
 | `G` | Reagrupar la crew con el protagonista |
 | `F5` | Guardar partida |
 | `F9` | Cargar partida |
+| `F10` | Mostrar diagnóstico de playtest |
 | `T` | Reiniciar encuentro |
 
 ## Slice actual
@@ -58,3 +59,6 @@ La persistencia está detallada en
 
 El ciclo jugable de misión, crew y policía está detallado en
 [`Documentation/Stage05Implementation.md`](Documentation/Stage05Implementation.md).
+
+La evaluación técnica y la recomendación de migración están en
+[`Documentation/Stage06MigrationDecision.md`](Documentation/Stage06MigrationDecision.md).

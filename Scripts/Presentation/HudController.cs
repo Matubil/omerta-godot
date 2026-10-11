@@ -18,6 +18,7 @@ public sealed partial class HudController : CanvasLayer
     private Label? _squadLabel;
     private Label? _policeLabel;
     private Label? _counterattackLabel;
+    private Label? _diagnosticsLabel;
     private float _statusRemaining;
 
     public override void _Ready()
@@ -36,6 +37,7 @@ public sealed partial class HudController : CanvasLayer
         _squadLabel = GetNode<Label>("SquadState");
         _policeLabel = GetNode<Label>("PoliceState");
         _counterattackLabel = GetNode<Label>("CounterattackState");
+        _diagnosticsLabel = GetNode<Label>("Diagnostics");
     }
 
     public override void _Process(double delta)
@@ -189,5 +191,14 @@ public sealed partial class HudController : CanvasLayer
         _counterattackLabel.Text = active
             ? $"REPRESALIA · {status.ToUpperInvariant()} · {remainingSeconds:0.0}s"
             : string.Empty;
+    }
+
+    public void SetDiagnostics(string text, bool visible)
+    {
+        if (_diagnosticsLabel is not null)
+        {
+            _diagnosticsLabel.Text = text;
+            _diagnosticsLabel.Visible = visible;
+        }
     }
 }
