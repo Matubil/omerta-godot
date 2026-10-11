@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Godot;
+using Omerta.GodotAdapters.Navigation;
 using Omerta.Presentation;
 
 namespace Omerta.GodotAdapters.Squad;
@@ -23,6 +24,7 @@ public sealed partial class AllyReinforcementController : Node
     public float VehicleSpeed { get; set; } = 7.0f;
 
     private Node3D? _vehicle;
+    private NavigationAgent3D? _vehicleNavigation;
     private readonly List<SquadCompanionController> _passengers = new();
     private SquadCommander? _commander;
     private HudController? _hud;
@@ -33,6 +35,7 @@ public sealed partial class AllyReinforcementController : Node
     {
         AddToGroup("reinforcement_service");
         _vehicle = GetParent().GetNode<Node3D>("ReinforcementVehicle");
+        _vehicleNavigation = _vehicle.GetNode<NavigationAgent3D>("NavigationAgent3D");
         ResolvePassengers();
         _commander = GetTree().GetFirstNodeInGroup("squad_commander") as SquadCommander;
         ResetArrival();
@@ -45,10 +48,20 @@ public sealed partial class AllyReinforcementController : Node
             return;
         }
 
-        _vehicle.GlobalPosition = _vehicle.GlobalPosition.MoveToward(
-            RouteDestination,
-            VehicleSpeed * (float)delta);
-        if (_vehicle.GlobalPosition.DistanceSquaredTo(RouteDestination) <= 0.05f)
+        Vector3 direction = _vehicleNavigation is not null
+            ? NavigationMotion.DirectionTo(_vehicle, _vehicleNavigation, RouteDestination)
+            : RouteDestination - _vehicle.GlobalPosition;
+        direction.Y = 0.0f;
+        if (direction.LengthSquared() > 0.001f)
+        {
+            float distance = Mathf.Min(VehicleSpeed * (float)delta, direction.Length());
+            _vehicle.GlobalPosition += direction.Normalized() * distance;
+            _vehicle.LookAt(_vehicle.GlobalPosition + direction, Vector3.Up);
+        }
+
+        Vector3 direct = RouteDestination - _vehicle.GlobalPosition;
+        direct.Y = 0.0f;
+        if (direct.LengthSquared() <= 0.09f)
         {
             DeployPassenger();
         }
@@ -64,6 +77,11 @@ public sealed partial class AllyReinforcementController : Node
         _hud ??= GetTree().GetFirstNodeInGroup("hud") as HudController;
         _vehicle.GlobalPosition = RouteStart;
         _vehicle.Visible = true;
+        if (_vehicleNavigation is not null)
+        {
+            _vehicleNavigation.TargetPosition = RouteDestination;
+        }
+
         Status = AllyReinforcementStatus.EnRoute;
         _hud?.ShowStatus("Los refuerzos vienen en camino.", 4.0f);
         return true;
@@ -76,6 +94,10 @@ public sealed partial class AllyReinforcementController : Node
         {
             _vehicle.GlobalPosition = RouteStart;
             _vehicle.Visible = false;
+            if (_vehicleNavigation is not null)
+            {
+                _vehicleNavigation.TargetPosition = RouteStart;
+            }
         }
 
         ResolvePassengers();

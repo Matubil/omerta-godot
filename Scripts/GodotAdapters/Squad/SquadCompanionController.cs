@@ -1,5 +1,6 @@
 using Godot;
 using Omerta.GodotAdapters.Combat;
+using Omerta.GodotAdapters.Navigation;
 
 namespace Omerta.GodotAdapters.Squad;
 
@@ -34,6 +35,7 @@ public sealed partial class SquadCompanionController : CharacterBody3D
     private Vector3 _destination;
     private double _nextDecisionTime;
     private CollisionShape3D? _collision;
+    private NavigationAgent3D? _navigation;
 
     public SquadCompanionOrder CurrentOrder { get; private set; } = SquadCompanionOrder.Follow;
 
@@ -46,6 +48,7 @@ public sealed partial class SquadCompanionController : CharacterBody3D
         _combatant = GetNode<Combatant>("Combatant");
         _weapon = GetNode<HitscanWeaponController>("WeaponController");
         _collision = GetNode<CollisionShape3D>("CollisionShape3D");
+        _navigation = GetNode<NavigationAgent3D>("NavigationAgent3D");
         _leader = GetTree().GetFirstNodeInGroup("player") as Node3D;
         if (StartsActive)
         {
@@ -92,7 +95,9 @@ public sealed partial class SquadCompanionController : CharacterBody3D
             TryAttack(distance);
         }
 
-        Vector3 direction = destination - GlobalPosition;
+        Vector3 direction = shouldMove && _navigation is not null
+            ? NavigationMotion.DirectionTo(this, _navigation, destination)
+            : destination - GlobalPosition;
         direction.Y = 0.0f;
         Vector3 velocity = Velocity;
         if (shouldMove && direction.LengthSquared() > 0.001f)
@@ -123,6 +128,11 @@ public sealed partial class SquadCompanionController : CharacterBody3D
         AddToGroup("companion");
         _combatant?.RestoreToFull();
         _weapon?.ResetRuntime();
+        if (_navigation is not null)
+        {
+            _navigation.TargetPosition = position;
+        }
+
         Regroup();
     }
 

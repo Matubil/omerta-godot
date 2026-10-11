@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3]
+[gd_scene load_steps=18 format=3]
 
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/GameBootstrap.cs" id="1_bootstrap"]
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/Input/PlayerInputAdapter.cs" id="2_input"]
@@ -13,6 +13,7 @@
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/Persistence/PersistenceController.cs" id="11_persistence"]
 [ext_resource type="PackedScene" path="res://Scenes/Gameplay/StageFive.tscn" id="12_stage_five"]
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/Diagnostics/PlaytestDiagnosticsController.cs" id="13_diagnostics"]
+[ext_resource type="PackedScene" path="res://Scenes/World/SharedNavigationWorld.tscn" id="14_navigation"]
 
 [sub_resource type="Environment" id="Environment_main"]
 background_mode = 1
@@ -54,6 +55,8 @@ script = ExtResource("10_economy")
 StartingMoney = 100
 
 [node name="CityBlock" parent="." instance=ExtResource("4_world")]
+
+[node name="SharedNavigationWorld" parent="." instance=ExtResource("14_navigation")]
 
 [node name="Workshop" parent="." instance=ExtResource("5_workshop")]
 

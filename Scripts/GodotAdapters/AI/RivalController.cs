@@ -2,6 +2,7 @@ using Godot;
 using Omerta.Domain.Combat.AI;
 using Omerta.Domain.Combat.Damage;
 using Omerta.GodotAdapters.Combat;
+using Omerta.GodotAdapters.Navigation;
 using Omerta.Presentation;
 
 namespace Omerta.GodotAdapters.AI;
@@ -38,6 +39,7 @@ public sealed partial class RivalController : CharacterBody3D
     private HitscanWeaponController? _weapon;
     private Node3D? _visual;
     private HudController? _hud;
+    private NavigationAgent3D? _navigation;
     private Vector3 _lastKnownPosition;
     private bool _hasLastKnownPosition;
     private double _nextDecisionTime;
@@ -55,6 +57,7 @@ public sealed partial class RivalController : CharacterBody3D
         _combatant = GetNode<Combatant>("Combatant");
         _weapon = GetNode<HitscanWeaponController>("WeaponController");
         _visual = GetNode<Node3D>("Visual");
+        _navigation = GetNode<NavigationAgent3D>("NavigationAgent3D");
         _hud = GetTree().GetFirstNodeInGroup("hud") as HudController;
         _combatant.Damaged += OnDamaged;
         _combatant.Defeated += OnDefeated;
@@ -100,22 +103,30 @@ public sealed partial class RivalController : CharacterBody3D
         Vector3 horizontalVelocity = Vector3.Zero;
         if (_perception.IsAlert && _hasLastKnownPosition)
         {
-            Vector3 direction = _lastKnownPosition - GlobalPosition;
-            direction.Y = 0.0f;
-            float distance = direction.Length();
-            if (direction.LengthSquared() > 0.001f)
+            Vector3 directDirection = _lastKnownPosition - GlobalPosition;
+            directDirection.Y = 0.0f;
+            Vector3 travelDirection = _navigation is not null
+                ? NavigationMotion.DirectionTo(this, _navigation, _lastKnownPosition)
+                : directDirection;
+            travelDirection.Y = 0.0f;
+            float distance = directDirection.Length();
+            Vector3 facingDirection = distance > StoppingDistance
+                ? travelDirection
+                : directDirection;
+            if (facingDirection.LengthSquared() > 0.001f)
             {
-                LookAt(GlobalPosition + direction, Vector3.Up);
+                LookAt(GlobalPosition + facingDirection, Vector3.Up);
             }
 
-            if (distance > StoppingDistance && distance <= ViewDistance)
+            if (distance > StoppingDistance && distance <= ViewDistance &&
+                travelDirection.LengthSquared() > 0.001f)
             {
-                horizontalVelocity = direction.Normalized() * MovementSpeed;
+                horizontalVelocity = travelDirection.Normalized() * MovementSpeed;
             }
 
             if (IsTargetVisible && distance <= ViewDistance)
             {
-                TryShoot(direction);
+                TryShoot(directDirection);
             }
         }
 
@@ -139,6 +150,10 @@ public sealed partial class RivalController : CharacterBody3D
         _hasLastKnownPosition = false;
         IsTargetVisible = false;
         _nextDecisionTime = 0;
+        if (_navigation is not null)
+        {
+            _navigation.TargetPosition = position;
+        }
         if (_visual is not null)
         {
             _visual.Rotation = Vector3.Zero;

@@ -2,6 +2,7 @@ using System;
 using Godot;
 using Omerta.Domain.Combat.Damage;
 using Omerta.GodotAdapters.Combat;
+using Omerta.GodotAdapters.Navigation;
 
 namespace Omerta.GodotAdapters.Businesses;
 
@@ -24,6 +25,7 @@ public sealed partial class CounterattackerController : CharacterBody3D
     private HitscanWeaponController? _weapon;
     private CollisionShape3D? _collision;
     private Node3D? _visual;
+    private NavigationAgent3D? _navigation;
     private Vector3 _objective;
     private double _nextDecisionTime;
     private bool _atObjective;
@@ -40,6 +42,7 @@ public sealed partial class CounterattackerController : CharacterBody3D
         _weapon = GetNode<HitscanWeaponController>("WeaponController");
         _collision = GetNode<CollisionShape3D>("CollisionShape3D");
         _visual = GetNode<Node3D>("Visual");
+        _navigation = GetNode<NavigationAgent3D>("NavigationAgent3D");
         _combatant.Defeated += OnDefeated;
         Deactivate();
     }
@@ -62,9 +65,13 @@ public sealed partial class CounterattackerController : CharacterBody3D
 
         _player ??= (GetTree().GetFirstNodeInGroup("player") as Node)?
             .GetNodeOrNull<Combatant>("Combatant");
-        Vector3 direction = _objective - GlobalPosition;
+        Vector3 directDirection = _objective - GlobalPosition;
+        Vector3 direction = _navigation is not null
+            ? NavigationMotion.DirectionTo(this, _navigation, _objective)
+            : directDirection;
         direction.Y = 0.0f;
-        bool reached = direction.LengthSquared() <= ObjectiveRadius * ObjectiveRadius;
+        directDirection.Y = 0.0f;
+        bool reached = directDirection.LengthSquared() <= ObjectiveRadius * ObjectiveRadius;
         if (reached != _atObjective)
         {
             _atObjective = reached;
@@ -101,6 +108,11 @@ public sealed partial class CounterattackerController : CharacterBody3D
         AddToGroup("hostile");
         _combatant?.RestoreToFull();
         _weapon?.ResetRuntime();
+        if (_navigation is not null)
+        {
+            _navigation.TargetPosition = objective;
+        }
+
         if (_visual is not null)
         {
             _visual.Rotation = Vector3.Zero;

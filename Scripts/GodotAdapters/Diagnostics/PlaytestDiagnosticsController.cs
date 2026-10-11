@@ -4,6 +4,7 @@ using Omerta.GodotAdapters.Businesses;
 using Omerta.GodotAdapters.Camera;
 using Omerta.GodotAdapters.Characters;
 using Omerta.GodotAdapters.Combat;
+using Omerta.GodotAdapters.Navigation;
 using Omerta.GodotAdapters.StageFive;
 using Omerta.Presentation;
 
@@ -19,8 +20,10 @@ public sealed partial class PlaytestDiagnosticsController : Node
     private StageFiveController? _stage;
     private WorkshopController? _workshop;
     private HitscanWeaponController? _weapon;
+    private SharedNavigationWorld? _navigation;
     private bool _visible;
     private bool _runSmokeTest;
+    private bool _runNavigationSmokeTest;
     private int _smokeFramesRemaining = 120;
     private float _refreshRemaining;
 
@@ -33,7 +36,11 @@ public sealed partial class PlaytestDiagnosticsController : Node
             if (argument == "--stage-six-smoke")
             {
                 _runSmokeTest = true;
-                break;
+            }
+            else if (argument == "--navigation-smoke")
+            {
+                _runNavigationSmokeTest = true;
+                _smokeFramesRemaining = 180;
             }
         }
     }
@@ -59,6 +66,11 @@ public sealed partial class PlaytestDiagnosticsController : Node
             _runSmokeTest = false;
             RunStageSixSmokeTest();
         }
+        else if (_runNavigationSmokeTest && --_smokeFramesRemaining <= 0)
+        {
+            _runNavigationSmokeTest = false;
+            RunNavigationSmokeTest();
+        }
     }
 
     private void ResolveDependencies()
@@ -69,6 +81,7 @@ public sealed partial class PlaytestDiagnosticsController : Node
         _stage ??= GetTree().GetFirstNodeInGroup("stage_five") as StageFiveController;
         _workshop ??= GetTree().GetFirstNodeInGroup("workshop") as WorkshopController;
         _weapon ??= _player?.GetNodeOrNull<HitscanWeaponController>("WeaponController");
+        _navigation ??= GetTree().GetFirstNodeInGroup("shared_navigation") as SharedNavigationWorld;
     }
 
     private void RefreshOverlay()
@@ -119,6 +132,80 @@ public sealed partial class PlaytestDiagnosticsController : Node
         catch (Exception exception)
         {
             GD.PushError($"Stage 6 smoke failed: {exception}");
+        }
+        finally
+        {
+            GetTree().Quit(exitCode);
+        }
+    }
+
+    private void RunNavigationSmokeTest()
+    {
+        int exitCode = 1;
+        try
+        {
+            ResolveDependencies();
+            Require(_navigation?.IsSynchronized == true, "synchronized navigation map");
+
+            Vector3[] companionPath = _navigation!.QueryPath(
+                new Vector3(-2.0f, 0.05f, 5.0f),
+                new Vector3(0.0f, 0.05f, -3.2f),
+                SharedNavigationWorld.PedestrianLayer);
+            Vector3[] counterattackPath = _navigation.QueryPath(
+                new Vector3(-17.0f, 0.05f, 15.0f),
+                new Vector3(0.0f, 0.05f, -3.4f),
+                SharedNavigationWorld.PedestrianLayer);
+            Vector3[] reinforcementPath = _navigation.QueryPath(
+                new Vector3(0.0f, 0.45f, 24.0f),
+                new Vector3(0.0f, 0.45f, 8.0f),
+                SharedNavigationWorld.VehicleLayer);
+            Vector3[] policePath = _navigation.QueryPath(
+                new Vector3(18.0f, 0.45f, 18.0f),
+                new Vector3(3.5f, 0.45f, 4.5f),
+                SharedNavigationWorld.VehicleLayer);
+
+            GD.Print(
+                $"Navigation route points: companion={companionPath.Length}, " +
+                $"counterattack={counterattackPath.Length}, reinforcement={reinforcementPath.Length}, " +
+                $"police={policePath.Length} [{string.Join("; ", policePath)}]");
+
+            Require(companionPath.Length >= 2, "companion pedestrian route");
+            Require(counterattackPath.Length >= 2, "counterattack pedestrian route");
+            Require(reinforcementPath.Length >= 2, "reinforcement vehicle route");
+            Require(policePath.Length >= 3, "police vehicle street turn");
+
+            ulong startedAt = Time.GetTicksUsec();
+            int routePointCount = 0;
+            int[] loadSteps = { 8, 16, 32, 64 };
+            foreach (int routeCount in loadSteps)
+            {
+                for (int index = 0; index < routeCount; index++)
+                {
+                    bool vehicle = index % 2 == 0;
+                    Vector3[] path = vehicle
+                        ? _navigation.QueryPath(
+                            new Vector3(18.0f, 0.45f, 18.0f),
+                            new Vector3(3.5f, 0.45f, 4.5f),
+                            SharedNavigationWorld.VehicleLayer)
+                        : _navigation.QueryPath(
+                            new Vector3(-17.0f, 0.05f, 15.0f),
+                            new Vector3(0.0f, 0.05f, -3.4f),
+                            SharedNavigationWorld.PedestrianLayer);
+                    Require(path.Length >= 2, $"load step {routeCount}, route {index + 1}");
+                    routePointCount += path.Length;
+                }
+            }
+
+            ulong elapsedUsec = Time.GetTicksUsec() - startedAt;
+            GD.Print(
+                $"Navigation smoke passed: pedestrian and vehicle layers, street turn and " +
+                $"8/16/32/64 route-query load verified ({routePointCount} total points in " +
+                $"{elapsedUsec / 1000.0:0.00} ms).");
+            exitCode = 0;
+        }
+        catch (Exception exception)
+        {
+            GD.PushError($"Navigation smoke failed: {exception}");
         }
         finally
         {

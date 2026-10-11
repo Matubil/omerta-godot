@@ -11,6 +11,7 @@ using Omerta.GodotAdapters.Businesses;
 using Omerta.GodotAdapters.Combat;
 using Omerta.GodotAdapters.Economy;
 using Omerta.GodotAdapters.Law;
+using Omerta.GodotAdapters.Navigation;
 using Omerta.GodotAdapters.Squad;
 using Omerta.Presentation;
 
@@ -74,6 +75,7 @@ public sealed partial class StageFiveController : Node3D
     private PoliceOfficerController? _policeOfficer;
     private CounterattackerController? _counterattacker;
     private Node3D? _policeVehicle;
+    private NavigationAgent3D? _policeVehicleNavigation;
     private AllyReinforcementController? _reinforcements;
     private SquadCommander? _squad;
     private HudController? _hud;
@@ -113,6 +115,7 @@ public sealed partial class StageFiveController : Node3D
         _playerWeapon = _player.GetNode<HitscanWeaponController>("WeaponController");
         _witness = GetNode<WitnessController>("Witness");
         _policeVehicle = GetNode<Node3D>("PoliceVehicle");
+        _policeVehicleNavigation = _policeVehicle.GetNode<NavigationAgent3D>("NavigationAgent3D");
         _policeOfficer = GetNode<PoliceOfficerController>("PoliceOfficer");
         _counterattacker = GetNode<CounterattackerController>("Counterattacker");
         _reinforcements = GetNode<AllyReinforcementController>("AllyReinforcement");
@@ -373,10 +376,23 @@ public sealed partial class StageFiveController : Node3D
         else if (_police.Status == PoliceResponseStatus.EnRoute)
         {
             _policeVehicle.Visible = true;
-            _policeVehicle.GlobalPosition = _policeVehicle.GlobalPosition.MoveToward(
-                PoliceVehicleDestination,
-                PoliceVehicleSpeed * deltaSeconds);
-            if (_policeVehicle.GlobalPosition.DistanceSquaredTo(PoliceVehicleDestination) <= 0.05f &&
+            Vector3 direction = _policeVehicleNavigation is not null
+                ? NavigationMotion.DirectionTo(
+                    _policeVehicle,
+                    _policeVehicleNavigation,
+                    PoliceVehicleDestination)
+                : PoliceVehicleDestination - _policeVehicle.GlobalPosition;
+            direction.Y = 0.0f;
+            if (direction.LengthSquared() > 0.001f)
+            {
+                float distance = Mathf.Min(PoliceVehicleSpeed * deltaSeconds, direction.Length());
+                _policeVehicle.GlobalPosition += direction.Normalized() * distance;
+                _policeVehicle.LookAt(_policeVehicle.GlobalPosition + direction, Vector3.Up);
+            }
+
+            Vector3 direct = PoliceVehicleDestination - _policeVehicle.GlobalPosition;
+            direct.Y = 0.0f;
+            if (direct.LengthSquared() <= 0.09f &&
                 _police.MarkArrived())
             {
                 _policeOfficer?.Activate(
@@ -497,6 +513,10 @@ public sealed partial class StageFiveController : Node3D
         {
             _policeVehicle.GlobalPosition = PoliceVehicleSpawn;
             _policeVehicle.Visible = false;
+            if (_policeVehicleNavigation is not null)
+            {
+                _policeVehicleNavigation.TargetPosition = PoliceVehicleSpawn;
+            }
         }
 
         _reinforcements?.ResetArrival();

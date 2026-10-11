@@ -2,6 +2,7 @@ using System;
 using Godot;
 using Omerta.Domain.Combat.Damage;
 using Omerta.GodotAdapters.Combat;
+using Omerta.GodotAdapters.Navigation;
 
 namespace Omerta.GodotAdapters.Law;
 
@@ -24,6 +25,7 @@ public sealed partial class PoliceOfficerController : CharacterBody3D
     private HitscanWeaponController? _weapon;
     private CollisionShape3D? _collision;
     private Node3D? _visual;
+    private NavigationAgent3D? _navigation;
     private Vector3 _lastKnownPosition;
     private double _nextDecisionTime;
 
@@ -39,6 +41,7 @@ public sealed partial class PoliceOfficerController : CharacterBody3D
         _weapon = GetNode<HitscanWeaponController>("WeaponController");
         _collision = GetNode<CollisionShape3D>("CollisionShape3D");
         _visual = GetNode<Node3D>("Visual");
+        _navigation = GetNode<NavigationAgent3D>("NavigationAgent3D");
         _combatant.Defeated += OnDefeated;
         Deactivate();
     }
@@ -67,9 +70,13 @@ public sealed partial class PoliceOfficerController : CharacterBody3D
             _lastKnownPosition = _player.Actor.GlobalPosition;
         }
 
-        Vector3 direction = _lastKnownPosition - GlobalPosition;
+        Vector3 directDirection = _lastKnownPosition - GlobalPosition;
+        directDirection.Y = 0.0f;
+        Vector3 direction = _navigation is not null
+            ? NavigationMotion.DirectionTo(this, _navigation, _lastKnownPosition)
+            : directDirection;
         direction.Y = 0.0f;
-        float distance = direction.Length();
+        float distance = directDirection.Length();
         Vector3 horizontalVelocity = Vector3.Zero;
         if (distance > StoppingDistance && direction.LengthSquared() > 0.001f)
         {
@@ -107,6 +114,11 @@ public sealed partial class PoliceOfficerController : CharacterBody3D
         AddToGroup("hostile");
         _combatant?.RestoreToFull();
         _weapon?.ResetRuntime();
+        if (_navigation is not null)
+        {
+            _navigation.TargetPosition = lastKnownPosition;
+        }
+
         if (_visual is not null)
         {
             _visual.Rotation = Vector3.Zero;

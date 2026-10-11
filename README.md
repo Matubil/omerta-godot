@@ -5,7 +5,7 @@ Reconstrucción en Godot 4.7.2 .NET del vertical slice original de Unity.
 - Nombre técnico y namespace: `Omerta`
 - Lenguaje principal: C#
 - Plataforma inicial: Windows
-- Estado actual: Etapas 0 a 6 del plan de migración
+- Estado actual: Etapas 0 a 6 del plan de migración + navegación compartida
 
 ## Ejecutar
 
@@ -43,6 +43,11 @@ generan un patrullero, búsqueda por última posición conocida y la opción con
 sobornar al agente. Una conquista operativa también programa una represalia rival que
 puede sabotear el taller, pero nunca transferir su propiedad.
 
+Compañeros, rivales, agentes, atacantes y vehículos ya calculan rutas sobre una malla
+compartida. Peatones y vehículos usan capas separadas para que el patrullero y los
+refuerzos respeten el trazado de calles mientras la IA a pie rodea la geometría del
+bloque.
+
 La partida manual se guarda como JSON versionado bajo `user://save_0.json`. Conserva
 pose, salud, munición, economía, propiedad, operatividad y progreso de misión. Tras una
 derrota se restaura el último guardado o el estado inicial si todavía no existe uno;
@@ -62,3 +67,6 @@ El ciclo jugable de misión, crew y policía está detallado en
 
 La evaluación técnica y la recomendación de migración están en
 [`Documentation/Stage06MigrationDecision.md`](Documentation/Stage06MigrationDecision.md).
+
+La base de navegación posterior a la Etapa 6 está detallada en
+[`Documentation/Stage07NavigationImplementation.md`](Documentation/Stage07NavigationImplementation.md).

@@ -32,7 +32,9 @@ public sealed partial class GameBootstrap : Node3D
 
     public override void _Ready()
     {
-        GD.Print($"{GameIdentity.CommercialName} [{GameIdentity.TechnicalName}] — Etapas 0 a 6");
+        GD.Print(
+            $"{GameIdentity.CommercialName} [{GameIdentity.TechnicalName}] — " +
+            "Etapas 0 a 6 + navegación compartida");
         _player = GetTree().GetFirstNodeInGroup("player") as PlayerController;
         _rival = GetTree().GetFirstNodeInGroup("rival") as RivalController;
         _hud = GetTree().GetFirstNodeInGroup("hud") as HudController;
@@ -54,6 +56,7 @@ public sealed partial class GameBootstrap : Node3D
         _rivalRotation = _rival.Rotation;
         _playerCombatant.Defeated += OnPlayerDefeated;
         GD.Print("Etapa 6 activa: vertical slice consolidado y listo para evaluación.");
+        GD.Print("Navegación activa: peatones y vehículos usan capas y rutas separadas.");
     }
 
     public override void _Process(double delta)
