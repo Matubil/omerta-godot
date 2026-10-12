@@ -5,7 +5,7 @@ Reconstrucción en Godot 4.7.2 .NET del vertical slice original de Unity.
 - Nombre técnico y namespace: `Omerta`
 - Lenguaje principal: C#
 - Plataforma inicial: Windows
-- Estado actual: Etapas 0 a 6 + navegación, evitamiento, oclusión, traversal y cobertura
+- Estado actual: Etapas 0 a 6 + navegación, cámara, traversal y misión de Bar La Niebla
 
 ## Ejecutar
 
@@ -44,6 +44,10 @@ dos aliados que llegan físicamente en vehículo. Los disparos próximos a un te
 generan un patrullero, búsqueda por última posición conocida y la opción contextual de
 sobornar al agente. Una conquista operativa también programa una represalia rival que
 puede sabotear el taller, pero nunca transferir su propiedad.
+
+Después de conquistar El Faro se habilita un informante con un segundo encargo. Bar La
+Niebla tiene exterior e interior propios: la misión exige sabotear su punto operativo,
+paga $100 y deja explícitamente la propiedad en manos rivales.
 
 Compañeros, rivales, agentes, atacantes y vehículos ya calculan rutas sobre una malla
 compartida. Peatones y vehículos usan capas separadas para que el patrullero y los
@@ -91,3 +95,6 @@ La resolución de oclusión de cámara está detallada en
 
 El traversal y la cobertura están detallados en
 [`Documentation/Stage10TraversalAndCover.md`](Documentation/Stage10TraversalAndCover.md).
+
+Bar La Niebla y su misión encadenada están detallados en
+[`Documentation/Stage11BarLaNiebla.md`](Documentation/Stage11BarLaNiebla.md).

@@ -57,8 +57,6 @@ La prueba posiciona al protagonista ante las superficies de entrenamiento y veri
 
 ## Próximo incremento recomendado
 
-Implementar **Bar La Niebla y la misión de sabotaje encadenada**. Ya están validados
-movimiento, combate, negocio, persistencia, misión, crew, policía, navegación,
-evitamiento, cámara y traversal; un segundo negocio comprobará que las reglas no están
-codificadas exclusivamente para El Faro. El alcance debería mantenerse acotado a
-sabotear el punto operativo sin conquistar el bar y a persistir ese resultado.
+Completado en `Stage11BarLaNiebla.md`: segundo negocio, informante y misión encadenada
+de sabotaje sin transferencia de propiedad. El siguiente incremento recomendado es
+Depósito San Telmo y control territorial derivado por mayoría de negocios.

@@ -1,0 +1,41 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/Missions/SabotageMissionController.cs" id="1_mission"]
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/Interaction/SabotageMissionGiverInteraction.cs" id="2_interaction"]
+
+[sub_resource type="StandardMaterial3D" id="InformantMaterial"]
+albedo_color = Color(0.2, 0.42, 0.26, 1)
+roughness = 0.88
+
+[sub_resource type="CapsuleMesh" id="InformantMesh"]
+material = SubResource("InformantMaterial")
+radius = 0.38
+height = 1.75
+
+[sub_resource type="CylinderShape3D" id="InteractionShape"]
+height = 2.2
+radius = 0.72
+
+[node name="SabotageMission" type="Node3D"]
+script = ExtResource("1_mission")
+
+[node name="Informant" type="Area3D" parent="."]
+position = Vector3(8, 0.9, -1)
+collision_layer = 2
+collision_mask = 0
+monitorable = true
+script = ExtResource("2_interaction")
+
+[node name="Visual" type="MeshInstance3D" parent="Informant"]
+mesh = SubResource("InformantMesh")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Informant"]
+shape = SubResource("InteractionShape")
+
+[node name="Label" type="Label3D" parent="Informant"]
+position = Vector3(0, 1.25, 0)
+modulate = Color(0.55, 0.95, 0.65, 1)
+text = "INFORMANTE"
+font_size = 30
+outline_size = 8
+billboard = 1

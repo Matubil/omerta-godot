@@ -27,6 +27,8 @@ public sealed class PersistenceTests
         Assert.That(restored.PlayerWeapons.Weapons[0].ReserveAmmo, Is.EqualTo(21));
         Assert.That(restored.Missions[0].MissionId, Is.EqualTo("mission.el-faro-takeover"));
         Assert.That(restored.Missions[0].Status, Is.EqualTo("TakeControl"));
+        Assert.That(restored.Businesses[1].BusinessId, Is.EqualTo("business.la-niebla-bar"));
+        Assert.That(restored.Missions[1].MissionId, Is.EqualTo("mission.sabotage.la-niebla"));
     }
 
     [Test]
@@ -48,13 +50,30 @@ public sealed class PersistenceTests
     {
         SaveGameSerializer serializer = new();
         string oldJson = serializer.Serialize(CreateSaveGame())
-            .Replace("\"version\": 2", "\"version\": 1");
+            .Replace("\"version\": 3", "\"version\": 1");
 
         SaveGameData migrated = serializer.Deserialize(oldJson);
 
         Assert.That(migrated.Version, Is.EqualTo(SaveGameData.CurrentVersion));
         Assert.That(migrated.Missions, Is.Empty);
         Assert.That(migrated.Economy.Balance, Is.EqualTo(350));
+    }
+
+    [Test]
+    public void VersionTwoSaveMigratesWithoutInventingSecondBusinessState()
+    {
+        SaveGameSerializer serializer = new();
+        SaveGameData legacy = CreateSaveGame();
+        legacy.Businesses.RemoveAt(1);
+        legacy.Missions.RemoveAt(1);
+        string oldJson = serializer.Serialize(legacy)
+            .Replace("\"version\": 3", "\"version\": 2");
+
+        SaveGameData migrated = serializer.Deserialize(oldJson);
+
+        Assert.That(migrated.Version, Is.EqualTo(SaveGameData.CurrentVersion));
+        Assert.That(migrated.Businesses, Has.Count.EqualTo(1));
+        Assert.That(migrated.Missions, Has.Count.EqualTo(1));
     }
 
     [Test]
@@ -148,6 +167,12 @@ public sealed class PersistenceTests
             OwnerFactionId = "faction.player-family",
             IsCriticalAssetOperational = false
         });
+        data.Businesses.Add(new BusinessSaveData
+        {
+            BusinessId = "business.la-niebla-bar",
+            OwnerFactionId = "faction.circle-ferro",
+            IsCriticalAssetOperational = false
+        });
         data.CharacterCombatStates.Add(new CharacterCombatSaveData
         {
             CharacterId = "character.player",
@@ -174,6 +199,12 @@ public sealed class PersistenceTests
             MissionId = "mission.el-faro-takeover",
             Status = "TakeControl",
             RewardGranted = false
+        });
+        data.Missions.Add(new MissionProgressSaveData
+        {
+            MissionId = "mission.sabotage.la-niebla",
+            Status = "Completed",
+            RewardGranted = true
         });
         return data;
     }

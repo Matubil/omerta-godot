@@ -22,6 +22,8 @@
 | Arma | Munición del cargador y reserva |
 | Economía | Saldo actual |
 | Taller El Faro | Propietario y estado del punto operativo |
+| Bar La Niebla | Propietario y estado del punto operativo |
+| Misiones | Fase y recompensa de El Faro y La Niebla |
 
 El estado disponible del comerciante se deriva de su salud al cargar. La posibilidad de
 exigir una rendición forzada se deriva de la salud del defensor. Así se evita guardar el
@@ -54,3 +56,10 @@ mismo hecho dos veces.
 - Prueba integrada headless: guardar, alterar dinero, pose, salud, munición y negocio,
   cargar y comprobar igualdad exacta del estado restaurado.
 - Carga normal de la escena principal sin errores.
+
+## Ampliación posterior
+
+El formato actual es versión 3 e incluye Bar La Niebla y la misión encadenada de
+sabotaje. Las partidas de versión 1 y 2 se migran conservando sus datos existentes; la
+ausencia del segundo negocio se interpreta como su estado inicial, sin inventar avance
+ni recompensas.

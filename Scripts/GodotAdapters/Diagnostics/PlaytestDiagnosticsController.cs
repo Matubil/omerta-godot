@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
 using Godot;
+using Omerta.Domain.Missions;
 using Omerta.GodotAdapters.Businesses;
 using Omerta.GodotAdapters.Camera;
 using Omerta.GodotAdapters.Characters;
 using Omerta.GodotAdapters.Combat;
+using Omerta.GodotAdapters.Economy;
+using Omerta.GodotAdapters.Missions;
 using Omerta.GodotAdapters.Navigation;
 using Omerta.GodotAdapters.StageFive;
 using Omerta.Presentation;
@@ -20,6 +23,9 @@ public sealed partial class PlaytestDiagnosticsController : Node
     private IsometricCameraController? _camera;
     private StageFiveController? _stage;
     private WorkshopController? _workshop;
+    private BarLaNieblaController? _bar;
+    private SabotageMissionController? _sabotageMission;
+    private EconomyController? _economy;
     private HitscanWeaponController? _weapon;
     private SharedNavigationWorld? _navigation;
     private bool _visible;
@@ -28,6 +34,11 @@ public sealed partial class PlaytestDiagnosticsController : Node
     private bool _runCrowdSmokeTest;
     private bool _runCameraSmokeTest;
     private bool _runTraversalSmokeTest;
+    private bool _runBarSabotageSmokeTest;
+    private int _barSabotageSmokeStage;
+    private int _barSabotageWaitFrames = 120;
+    private int _barBalanceBeforeSabotage;
+    private string _barOwnerBeforeSabotage = string.Empty;
     private int _traversalSmokeStage;
     private int _traversalSmokeObservationFrames = 90;
     private float _traversalStartZ;
@@ -71,6 +82,11 @@ public sealed partial class PlaytestDiagnosticsController : Node
                 _runTraversalSmokeTest = true;
                 _smokeFramesRemaining = 120;
             }
+            else if (argument == "--bar-sabotage-smoke")
+            {
+                _runBarSabotageSmokeTest = true;
+                _smokeFramesRemaining = 120;
+            }
         }
     }
 
@@ -112,6 +128,10 @@ public sealed partial class PlaytestDiagnosticsController : Node
         {
             AdvanceTraversalSmokeTest();
         }
+        else if (_runBarSabotageSmokeTest)
+        {
+            AdvanceBarSabotageSmokeTest();
+        }
     }
 
     private void ResolveDependencies()
@@ -121,6 +141,9 @@ public sealed partial class PlaytestDiagnosticsController : Node
         _camera ??= GetTree().GetFirstNodeInGroup("camera_rig") as IsometricCameraController;
         _stage ??= GetTree().GetFirstNodeInGroup("stage_five") as StageFiveController;
         _workshop ??= GetTree().GetFirstNodeInGroup("workshop") as WorkshopController;
+        _bar ??= GetTree().GetFirstNodeInGroup("la_niebla") as BarLaNieblaController;
+        _sabotageMission ??= GetTree().GetFirstNodeInGroup("sabotage_mission") as SabotageMissionController;
+        _economy ??= GetTree().GetFirstNodeInGroup("economy") as EconomyController;
         _weapon ??= _player?.GetNodeOrNull<HitscanWeaponController>("WeaponController");
         _navigation ??= GetTree().GetFirstNodeInGroup("shared_navigation") as SharedNavigationWorld;
     }
@@ -153,6 +176,8 @@ public sealed partial class PlaytestDiagnosticsController : Node
             Require(_camera?.Camera is not null, "isometric camera");
             Require(_stage?.HasRequiredRuntimeActors == true, "stage 5 runtime actors");
             Require(_workshop?.Business is not null, "El Faro business");
+            Require(_bar?.Business is not null, "Bar La Niebla business");
+            Require(_sabotageMission is not null, "La Niebla sabotage mission");
             Require(_weapon?.Runtime is not null, "player weapon");
             Require(GetTree().GetNodesInGroup("companion").Count == 1, "one initial companion");
             Require(GetTree().GetNodesInGroup("reserve_companion").Count == 2, "two reserve allies");
@@ -378,8 +403,8 @@ public sealed partial class PlaytestDiagnosticsController : Node
             Require(_camera is not null, "isometric camera controller");
             Require(_workshop is not null, "workshop for roof fade validation");
             Require(
-                GetTree().GetNodesInGroup("camera_fade_occluder").Count == 4,
-                "two building and two roof fade occluders");
+                GetTree().GetNodesInGroup("camera_fade_occluder").Count == 6,
+                "two building and four business roof fade occluders");
             Require(_camera!.FadedGeometryCount >= 1, "runtime roof fade selection");
             MeshInstance3D interiorRoof = _workshop!.GetNode<MeshInstance3D>(
                 "Interior/Roof/Mesh");
@@ -495,6 +520,105 @@ public sealed partial class PlaytestDiagnosticsController : Node
         {
             _runTraversalSmokeTest = false;
             GD.PushError($"Traversal smoke failed: {exception}");
+            GetTree().Quit(1);
+        }
+    }
+
+    private void AdvanceBarSabotageSmokeTest()
+    {
+        try
+        {
+            ResolveDependencies();
+            Require(_player is not null, "player for Bar La Niebla smoke");
+            Require(_stage is not null, "El Faro prerequisite mission");
+            Require(_workshop is not null, "El Faro prerequisite business");
+            Require(_bar is not null, "Bar La Niebla business");
+            Require(_sabotageMission is not null, "Bar La Niebla sabotage mission");
+            Require(_economy is not null, "economy for sabotage reward");
+
+            if (_barSabotageSmokeStage == 0)
+            {
+                if (--_smokeFramesRemaining > 0)
+                {
+                    return;
+                }
+
+                Require(
+                    _sabotageMission!.MissionStatus == BusinessSabotageMissionStatus.Locked,
+                    "sabotage mission initially locked");
+                Require(_bar!.Operations.IsCriticalAssetOperational, "La Niebla initially operational");
+                Require(
+                    _bar.Business.OwnerId == _bar.Definition.InitialOwnerId,
+                    "La Niebla initially rival-owned");
+
+                _stage!.StartMission();
+                for (int interaction = 0; interaction < 4; interaction++)
+                {
+                    _workshop!.InteractWithMerchant();
+                }
+
+                Require(
+                    _stage.MissionStatus == PropertyTakeoverMissionStatus.Completed,
+                    "El Faro prerequisite completed");
+                _barSabotageSmokeStage = 1;
+                _barSabotageWaitFrames = 3;
+                return;
+            }
+
+            if (_barSabotageSmokeStage == 1)
+            {
+                if (--_barSabotageWaitFrames > 0)
+                {
+                    return;
+                }
+
+                Require(
+                    _sabotageMission!.MissionStatus == BusinessSabotageMissionStatus.Available,
+                    "sabotage mission unlocked by El Faro");
+                _sabotageMission.StartMission();
+                Require(
+                    _sabotageMission.MissionStatus == BusinessSabotageMissionStatus.ReachProperty,
+                    "sabotage mission accepted");
+                _player!.GlobalPosition = _bar!.ExteriorEntrancePosition + Vector3.Up * 0.05f;
+                _player.Velocity = Vector3.Zero;
+                _barSabotageSmokeStage = 2;
+                _barSabotageWaitFrames = 3;
+                return;
+            }
+
+            if (--_barSabotageWaitFrames > 0)
+            {
+                return;
+            }
+
+            Require(
+                _sabotageMission!.MissionStatus == BusinessSabotageMissionStatus.SabotageTarget,
+                "arrival advances sabotage objective");
+            _barOwnerBeforeSabotage = _bar!.Business.OwnerId;
+            _barBalanceBeforeSabotage = _economy!.Economy.Balance;
+            _bar.InteractWithOperations();
+            Require(
+                _sabotageMission.MissionStatus == BusinessSabotageMissionStatus.Completed,
+                "sabotage mission completion");
+            Require(!_bar.Operations.IsCriticalAssetOperational, "La Niebla sabotaged operations");
+            Require(
+                _bar.Business.OwnerId == _barOwnerBeforeSabotage,
+                "sabotage preserves rival ownership");
+            Require(
+                _economy.Economy.Balance == _barBalanceBeforeSabotage +
+                    _sabotageMission.MissionReward,
+                "sabotage reward granted exactly once");
+
+            GD.Print(
+                $"Bar sabotage smoke passed: chained unlock, arrival, sabotage, rival ownership " +
+                $"and ${_sabotageMission.MissionReward} reward verified.");
+            _runBarSabotageSmokeTest = false;
+            GetTree().Quit(0);
+        }
+        catch (Exception exception)
+        {
+            _runBarSabotageSmokeTest = false;
+            GD.PushError($"Bar sabotage smoke failed: {exception}");
             GetTree().Quit(1);
         }
     }

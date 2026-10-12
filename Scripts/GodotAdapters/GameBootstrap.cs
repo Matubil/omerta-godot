@@ -7,6 +7,7 @@ using Omerta.GodotAdapters.Characters;
 using Omerta.GodotAdapters.Combat;
 using Omerta.GodotAdapters.Economy;
 using Omerta.GodotAdapters.Persistence;
+using Omerta.GodotAdapters.Missions;
 using Omerta.GodotAdapters.StageFive;
 using Omerta.Presentation;
 
@@ -22,9 +23,11 @@ public sealed partial class GameBootstrap : Node3D
     private RivalController? _rival;
     private HudController? _hud;
     private WorkshopController? _workshop;
+    private BarLaNieblaController? _bar;
     private EconomyController? _economy;
     private PersistenceController? _persistence;
     private StageFiveController? _stageFive;
+    private SabotageMissionController? _sabotageMission;
     private Vector3 _playerSpawn;
     private Vector3 _playerRotation;
     private Vector3 _rivalSpawn;
@@ -34,14 +37,16 @@ public sealed partial class GameBootstrap : Node3D
     {
         GD.Print(
             $"{GameIdentity.CommercialName} [{GameIdentity.TechnicalName}] — " +
-            "Etapas 0 a 6 + navegación, cámara y traversal");
+            "Etapas 0 a 6 + navegación, traversal y Bar La Niebla");
         _player = GetTree().GetFirstNodeInGroup("player") as PlayerController;
         _rival = GetTree().GetFirstNodeInGroup("rival") as RivalController;
         _hud = GetTree().GetFirstNodeInGroup("hud") as HudController;
         _workshop = GetTree().GetFirstNodeInGroup("workshop") as WorkshopController;
+        _bar = GetTree().GetFirstNodeInGroup("la_niebla") as BarLaNieblaController;
         _economy = GetTree().GetFirstNodeInGroup("economy") as EconomyController;
         _persistence = GetTree().GetFirstNodeInGroup("persistence") as PersistenceController;
         _stageFive = GetTree().GetFirstNodeInGroup("stage_five") as StageFiveController;
+        _sabotageMission = GetTree().GetFirstNodeInGroup("sabotage_mission") as SabotageMissionController;
         if (_player is null || _rival is null)
         {
             GD.PushError("The combat slice requires one player and one rival.");
@@ -61,6 +66,7 @@ public sealed partial class GameBootstrap : Node3D
             "peatones activos aplican evitamiento local.");
         GD.Print("Cámara activa: brazo con colisión y oclusores visuales atenuables.");
         GD.Print("Traversal activo: vault contextual y cobertura alta/baja.");
+        GD.Print("Contenido activo: segundo negocio y misión encadenada de sabotaje.");
     }
 
     public override void _Process(double delta)
@@ -90,8 +96,10 @@ public sealed partial class GameBootstrap : Node3D
         _playerCombat.ResetCombat();
         _rival.ResetCombat(_rivalSpawn, _rivalRotation);
         _workshop?.ResetBusinessEncounter();
+        _bar?.ResetBusinessEncounter();
         _economy?.ResetEconomy();
         _stageFive?.ResetStageFiveEncounter();
+        _sabotageMission?.ResetEncounter();
         _hud?.ShowStatus("Encuentro reiniciado.");
     }
 

@@ -1,4 +1,4 @@
-[gd_scene load_steps=18 format=3]
+[gd_scene load_steps=20 format=3]
 
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/GameBootstrap.cs" id="1_bootstrap"]
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/Input/PlayerInputAdapter.cs" id="2_input"]
@@ -14,6 +14,8 @@
 [ext_resource type="PackedScene" path="res://Scenes/Gameplay/StageFive.tscn" id="12_stage_five"]
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/Diagnostics/PlaytestDiagnosticsController.cs" id="13_diagnostics"]
 [ext_resource type="PackedScene" path="res://Scenes/World/SharedNavigationWorld.tscn" id="14_navigation"]
+[ext_resource type="PackedScene" path="res://Scenes/Businesses/BarLaNiebla.tscn" id="15_bar"]
+[ext_resource type="PackedScene" path="res://Scenes/Gameplay/SabotageMission.tscn" id="16_sabotage"]
 
 [sub_resource type="Environment" id="Environment_main"]
 background_mode = 1
@@ -60,6 +62,8 @@ StartingMoney = 100
 
 [node name="Workshop" parent="." instance=ExtResource("5_workshop")]
 
+[node name="BarLaNiebla" parent="." instance=ExtResource("15_bar")]
+
 [node name="Player" parent="." instance=ExtResource("6_player")]
 position = Vector3(0, 0.05, 4)
 
@@ -68,6 +72,8 @@ position = Vector3(5, 0.05, -3)
 rotation_degrees = Vector3(0, 145, 0)
 
 [node name="StageFive" parent="." instance=ExtResource("12_stage_five")]
+
+[node name="SabotageMission" parent="." instance=ExtResource("16_sabotage")]
 
 [node name="CameraRig" type="Node3D" parent="." groups=["camera_rig"]]
 script = ExtResource("3_camera")

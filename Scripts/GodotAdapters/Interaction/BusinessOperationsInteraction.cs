@@ -6,28 +6,28 @@ namespace Omerta.GodotAdapters.Interaction;
 
 public sealed partial class BusinessOperationsInteraction : Area3D, IInteractable
 {
-    private WorkshopController? _workshop;
+    private IBusinessOperationsHost? _host;
 
-    public bool CanInteract => ResolveWorkshop()?.CanInteractWithOperations == true;
+    public bool CanInteract => ResolveHost()?.CanInteractWithOperations == true;
 
-    public string InteractionPrompt => ResolveWorkshop()?.OperationsPrompt ?? string.Empty;
+    public string InteractionPrompt => ResolveHost()?.OperationsPrompt ?? string.Empty;
 
-    public void Interact() => ResolveWorkshop()?.InteractWithOperations();
+    public void Interact() => ResolveHost()?.InteractWithOperations();
 
-    private WorkshopController? ResolveWorkshop()
+    private IBusinessOperationsHost? ResolveHost()
     {
-        if (_workshop is not null)
+        if (_host is not null)
         {
-            return _workshop;
+            return _host;
         }
 
         Node? current = GetParent();
-        while (current is not null && current is not WorkshopController)
+        while (current is not null && current is not IBusinessOperationsHost)
         {
             current = current.GetParent();
         }
 
-        _workshop = current as WorkshopController;
-        return _workshop;
+        _host = current as IBusinessOperationsHost;
+        return _host;
     }
 }

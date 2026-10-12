@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using Godot;
+using Omerta.Domain.Missions;
 using Omerta.Domain.Persistence;
 using Omerta.GodotAdapters.AI;
 using Omerta.GodotAdapters.Businesses;
@@ -8,6 +9,7 @@ using Omerta.GodotAdapters.Characters;
 using Omerta.GodotAdapters.Combat;
 using Omerta.GodotAdapters.Economy;
 using Omerta.GodotAdapters.Input;
+using Omerta.GodotAdapters.Missions;
 using Omerta.GodotAdapters.StageFive;
 using Omerta.Infrastructure.Persistence;
 using Omerta.Presentation;
@@ -30,9 +32,11 @@ public sealed partial class PersistenceController : Node
     private RivalController? _rival;
     private Combatant? _rivalCombatant;
     private WorkshopController? _workshop;
+    private BarLaNieblaController? _bar;
     private EconomyController? _economy;
     private HudController? _hud;
     private StageFiveController? _stageFive;
+    private SabotageMissionController? _sabotageMission;
     private bool _recoveryScheduled;
     private bool _runSmokeTest;
 
@@ -47,13 +51,16 @@ public sealed partial class PersistenceController : Node
         _player = GetTree().GetFirstNodeInGroup("player") as PlayerController;
         _rival = GetTree().GetFirstNodeInGroup("rival") as RivalController;
         _workshop = GetTree().GetFirstNodeInGroup("workshop") as WorkshopController;
+        _bar = GetTree().GetFirstNodeInGroup("la_niebla") as BarLaNieblaController;
         _economy = GetTree().GetFirstNodeInGroup("economy") as EconomyController;
         _hud = GetTree().GetFirstNodeInGroup("hud") as HudController;
         _stageFive = GetTree().GetFirstNodeInGroup("stage_five") as StageFiveController;
-        if (_player is null || _rival is null || _workshop is null || _economy is null ||
-            _stageFive is null)
+        _sabotageMission = GetTree().GetFirstNodeInGroup("sabotage_mission") as SabotageMissionController;
+        if (_player is null || _rival is null || _workshop is null || _bar is null ||
+            _economy is null || _stageFive is null || _sabotageMission is null)
         {
-            GD.PushError("Persistence requires the player, rival, workshop, economy and stage 5 nodes.");
+            GD.PushError(
+                "Persistence requires player, rival, both businesses, economy and mission nodes.");
             SetProcess(false);
             return;
         }
@@ -125,6 +132,12 @@ public sealed partial class PersistenceController : Node
             OwnerFactionId = _workshop.Business.OwnerId,
             IsCriticalAssetOperational = _workshop.Operations.IsCriticalAssetOperational
         });
+        data.Businesses.Add(new BusinessSaveData
+        {
+            BusinessId = _bar!.Business.Id,
+            OwnerFactionId = _bar.Business.OwnerId,
+            IsCriticalAssetOperational = _bar.Operations.IsCriticalAssetOperational
+        });
         data.CharacterCombatStates.Add(CreateCombatState(_playerCombatant!));
         data.CharacterCombatStates.Add(CreateCombatState(_rivalCombatant!));
         data.CharacterCombatStates.Add(new CharacterCombatSaveData
@@ -139,6 +152,7 @@ public sealed partial class PersistenceController : Node
             ReserveAmmo = _playerWeapon.Runtime.ReserveAmmo
         });
         data.Missions.Add(_stageFive!.CreateMissionSaveData());
+        data.Missions.Add(_sabotageMission!.CreateMissionSaveData());
         return data;
     }
 
@@ -146,6 +160,7 @@ public sealed partial class PersistenceController : Node
     {
         EnsureReady();
         ValidatedRestore restore = Validate(data);
+        _sabotageMission!.PrepareForLoad();
         _player!.RestorePersistentPose(restore.PlayerPosition, restore.PlayerRotation);
         _economy!.RestoreBalance(data.Economy.Balance);
         _rival!.RestorePersistentState(restore.RivalHealth);
@@ -154,11 +169,15 @@ public sealed partial class PersistenceController : Node
             restore.Business.IsCriticalAssetOperational,
             restore.MerchantHealth,
             restore.RivalHealth == 0);
+        _bar!.RestorePersistentState(
+            restore.BarBusiness?.OwnerFactionId ?? _bar.Definition.InitialOwnerId,
+            restore.BarBusiness?.IsCriticalAssetOperational ?? true);
         _playerCombat!.RestoreCombat(
             restore.PlayerHealth,
             restore.Weapon.MagazineAmmo,
             restore.Weapon.ReserveAmmo);
         _stageFive!.RestoreAfterLoad(restore.Mission);
+        _sabotageMission!.RestoreAfterLoad(restore.SabotageMission);
     }
 
     public bool SaveNow()
@@ -257,6 +276,9 @@ public sealed partial class PersistenceController : Node
                 false,
                 50,
                 true);
+            _bar!.RestorePersistentState(
+                _bar.Definition.InitialOwnerId,
+                false);
             if (!LoadNow())
             {
                 throw new InvalidOperationException("The smoke load operation failed.");
@@ -270,7 +292,51 @@ public sealed partial class PersistenceController : Node
                     "The restored runtime state differs from the saved state.");
             }
 
-            GD.Print("Persistence smoke passed: save, mutation and exact restore verified.");
+            _stageFive!.RestoreAfterLoad(new MissionProgressSaveData
+            {
+                MissionId = StageFiveController.ElFaroMissionId,
+                Status = PropertyTakeoverMissionStatus.Completed.ToString(),
+                RewardGranted = true
+            });
+            _bar!.RestorePersistentState(_bar.Definition.InitialOwnerId, true);
+            _sabotageMission!.RestoreAfterLoad(new MissionProgressSaveData
+            {
+                MissionId = SabotageMissionController.MissionId,
+                Status = BusinessSabotageMissionStatus.SabotageTarget.ToString(),
+                RewardGranted = false
+            });
+            _bar.InteractWithOperations();
+            if (_sabotageMission.MissionStatus !=
+                BusinessSabotageMissionStatus.Completed)
+            {
+                throw new InvalidOperationException("The integrated sabotage setup did not complete.");
+            }
+
+            SaveGameData completedSabotage = CaptureCurrentState();
+            if (!SaveNow())
+            {
+                throw new InvalidOperationException("The completed sabotage save operation failed.");
+            }
+
+            _sabotageMission.PrepareForLoad();
+            _bar.RestorePersistentState(WorkshopController.PlayerFactionId, true);
+            _economy.Economy.AddMoney(31);
+            if (!LoadNow())
+            {
+                throw new InvalidOperationException("The completed sabotage load operation failed.");
+            }
+
+            string completedExpectedJson = _serializer.Serialize(completedSabotage);
+            string completedActualJson = _serializer.Serialize(CaptureCurrentState());
+            if (completedExpectedJson != completedActualJson)
+            {
+                throw new InvalidOperationException(
+                    "The restored completed sabotage differs from the saved state.");
+            }
+
+            GD.Print(
+                "Persistence smoke passed: base state and completed La Niebla sabotage " +
+                "save/mutation/exact restore verified.");
             exitCode = 0;
         }
         catch (Exception exception)
@@ -316,12 +382,24 @@ public sealed partial class PersistenceController : Node
             throw new InvalidDataException($"Unknown business owner '{business.OwnerFactionId}'.");
         }
 
+        BusinessSaveData? barBusiness = FindOptionalBusiness(data, _bar!.Business.Id);
+        if (barBusiness is not null &&
+            barBusiness.OwnerFactionId != WorkshopController.PlayerFactionId &&
+            barBusiness.OwnerFactionId != _bar.Definition.InitialOwnerId)
+        {
+            throw new InvalidDataException(
+                $"Unknown La Niebla owner '{barBusiness.OwnerFactionId}'.");
+        }
+
         int playerHealth = FindHealth(data, _playerCombatant!);
         int rivalHealth = FindHealth(data, _rivalCombatant!);
         Combatant merchant = _workshop.GetNode<Combatant>("Interior/Merchant/Combatant");
         int merchantHealth = FindHealth(data, merchant);
         WeaponSaveData weapon = FindWeapon(data, _playerWeapon!.Runtime.Specification.Id);
         MissionProgressSaveData? mission = _stageFive!.ValidateMissionProgress(data.Missions);
+        MissionProgressSaveData? sabotageMission = _sabotageMission!.ValidateMissionProgress(
+            data.Missions,
+            barBusiness?.IsCriticalAssetOperational ?? true);
         if (weapon.MagazineAmmo < 0 ||
             weapon.MagazineAmmo > _playerWeapon.Runtime.Specification.MagazineCapacity ||
             weapon.ReserveAmmo < 0)
@@ -345,11 +423,13 @@ public sealed partial class PersistenceController : Node
 
         return new ValidatedRestore(
             business,
+            barBusiness,
             playerHealth,
             rivalHealth,
             merchantHealth,
             weapon,
             mission,
+            sabotageMission,
             position,
             rotation.Normalized());
     }
@@ -379,6 +459,27 @@ public sealed partial class PersistenceController : Node
         }
 
         return match ?? throw new InvalidDataException($"Business '{businessId}' is missing from the save.");
+    }
+
+    private static BusinessSaveData? FindOptionalBusiness(SaveGameData data, string businessId)
+    {
+        BusinessSaveData? match = null;
+        foreach (BusinessSaveData business in data.Businesses)
+        {
+            if (business.BusinessId != businessId)
+            {
+                continue;
+            }
+
+            if (match is not null)
+            {
+                throw new InvalidDataException($"Business '{businessId}' is duplicated in the save.");
+            }
+
+            match = business;
+        }
+
+        return match;
     }
 
     private static int FindHealth(SaveGameData data, Combatant combatant)
@@ -440,7 +541,7 @@ public sealed partial class PersistenceController : Node
         if (_storage is null || _player is null || _playerCombat is null ||
             _playerCombatant is null || _playerWeapon is null || _rival is null ||
             _rivalCombatant is null || _workshop is null || _economy is null ||
-            _stageFive is null)
+            _bar is null || _stageFive is null || _sabotageMission is null)
         {
             throw new InvalidOperationException("Persistence has not been initialized.");
         }
@@ -454,11 +555,13 @@ public sealed partial class PersistenceController : Node
 
     private sealed record ValidatedRestore(
         BusinessSaveData Business,
+        BusinessSaveData? BarBusiness,
         int PlayerHealth,
         int RivalHealth,
         int MerchantHealth,
         WeaponSaveData Weapon,
         MissionProgressSaveData? Mission,
+        MissionProgressSaveData? SabotageMission,
         Vector3 PlayerPosition,
         Quaternion PlayerRotation);
 }
