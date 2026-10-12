@@ -13,6 +13,7 @@ using Omerta.GodotAdapters.StageFive;
 using Omerta.GodotAdapters.Territories;
 using Omerta.GodotAdapters.Interaction;
 using Omerta.Domain.Combat.Weapons;
+using Omerta.GodotAdapters.Vehicles;
 using Omerta.Presentation;
 
 namespace Omerta.GodotAdapters.Diagnostics;
@@ -34,6 +35,8 @@ public sealed partial class PlaytestDiagnosticsController : Node
     private HitscanWeaponController? _weapon;
     private PlayerWeaponLoadoutController? _weaponLoadout;
     private VehicleArsenalInteraction? _vehicleArsenal;
+    private DriveableVehicleController? _stolenVehicle;
+    private GarageRegistrationInteraction? _vehicleGarage;
     private SharedNavigationWorld? _navigation;
     private bool _visible;
     private bool _runSmokeTest;
@@ -45,6 +48,7 @@ public sealed partial class PlaytestDiagnosticsController : Node
     private bool _runTerritorySmokeTest;
     private bool _runDefenseMissionSmokeTest;
     private bool _runWeaponLoadoutSmokeTest;
+    private bool _runVehicleOwnershipSmokeTest;
     private int _barSabotageSmokeStage;
     private int _barSabotageWaitFrames = 120;
     private int _barBalanceBeforeSabotage;
@@ -112,6 +116,11 @@ public sealed partial class PlaytestDiagnosticsController : Node
                 _runWeaponLoadoutSmokeTest = true;
                 _smokeFramesRemaining = 120;
             }
+            else if (argument == "--vehicle-ownership-smoke")
+            {
+                _runVehicleOwnershipSmokeTest = true;
+                _smokeFramesRemaining = 120;
+            }
         }
     }
 
@@ -172,6 +181,11 @@ public sealed partial class PlaytestDiagnosticsController : Node
             _runWeaponLoadoutSmokeTest = false;
             RunWeaponLoadoutSmokeTest();
         }
+        else if (_runVehicleOwnershipSmokeTest && --_smokeFramesRemaining <= 0)
+        {
+            _runVehicleOwnershipSmokeTest = false;
+            RunVehicleOwnershipSmokeTest();
+        }
     }
 
     private void ResolveDependencies()
@@ -190,6 +204,20 @@ public sealed partial class PlaytestDiagnosticsController : Node
         _weaponLoadout ??= _player?.GetNodeOrNull<PlayerWeaponLoadoutController>("WeaponLoadout");
         Node3D? familyVehicle = GetTree().GetFirstNodeInGroup("family_vehicle") as Node3D;
         _vehicleArsenal ??= familyVehicle?.GetNodeOrNull<VehicleArsenalInteraction>("ArsenalTrunk");
+        _vehicleGarage ??= GetTree().GetFirstNodeInGroup("vehicle_garage")
+            as GarageRegistrationInteraction;
+        if (_stolenVehicle is null)
+        {
+            foreach (Node node in GetTree().GetNodesInGroup("driveable_vehicle"))
+            {
+                if (node is DriveableVehicleController vehicle && vehicle.PersistState)
+                {
+                    _stolenVehicle = vehicle;
+                    break;
+                }
+            }
+        }
+
         _navigation ??= GetTree().GetFirstNodeInGroup("shared_navigation") as SharedNavigationWorld;
     }
 
@@ -206,8 +234,10 @@ public sealed partial class PlaytestDiagnosticsController : Node
             Require(!_weaponLoadout.IsLongGunCarried, "shotgun begins inside the family vehicle");
             Require(!_weaponLoadout.TryEquipLongGun(), "stored shotgun cannot be selected");
 
-            Node3D vehicle = _vehicleArsenal!.GetParent<Node3D>();
+            DriveableVehicleController vehicle =
+                _vehicleArsenal!.GetParent<DriveableVehicleController>();
             vehicle.Visible = true;
+            vehicle.SetDriveEnabled(true);
             Require(_vehicleArsenal.CanInteract, "visible family trunk can be used");
             _vehicleArsenal.Interact();
             Require(_weaponLoadout.IsLongGunCarried, "shotgun transferred to long-gun slot");
@@ -234,6 +264,59 @@ public sealed partial class PlaytestDiagnosticsController : Node
         catch (Exception exception)
         {
             GD.PushError($"Weapon loadout smoke failed: {exception}");
+        }
+        finally
+        {
+            GetTree().Quit(exitCode);
+        }
+    }
+
+    private void RunVehicleOwnershipSmokeTest()
+    {
+        int exitCode = 1;
+        try
+        {
+            ResolveDependencies();
+            Require(_player is not null, "player");
+            Require(_stolenVehicle is not null, "persistent stolen street car");
+            Require(_vehicleGarage is not null, "El Faro registration garage");
+            Require(_workshop is not null, "El Faro workshop");
+            Require(_economy is not null, "economy");
+            Require(!_stolenVehicle!.IsFamilyOwned, "street car begins stolen");
+            VehicleArsenalInteraction trunk =
+                _stolenVehicle.GetNode<VehicleArsenalInteraction>("ArsenalTrunk");
+            Require(!trunk.CanInteract, "stolen car cannot access family arsenal");
+
+            _stolenVehicle.GlobalPosition = _vehicleGarage!.GlobalPosition + Vector3.Forward * 2.0f;
+            Require(_stolenVehicle.TryEnterDriver(_player!), "player enters stolen vehicle");
+            Require(_player!.IsDriving && _stolenVehicle.IsDriven, "driver state synchronized");
+            _stolenVehicle.ForceExitDriver();
+            Require(!_player.IsDriving && !_stolenVehicle.IsDriven, "player exits vehicle");
+
+            _workshop!.RestorePersistentState(
+                WorkshopController.PlayerFactionId,
+                true,
+                _workshop.MerchantHealth,
+                false);
+            _economy!.RestoreBalance(100);
+            int balanceBefore = _economy.Economy.Balance;
+            Require(_vehicleGarage.FindRegistrationCandidate() == _stolenVehicle,
+                "garage detects parked stolen car");
+            _vehicleGarage.Interact();
+            Require(_stolenVehicle.IsFamilyOwned, "garage registers car as family owned");
+            Require(
+                _economy.Economy.Balance == balanceBefore - _vehicleGarage.RegistrationCost,
+                "garage charges registration exactly once");
+            Require(trunk.CanInteract, "registered car unlocks shared family arsenal");
+
+            GD.Print(
+                "Vehicle ownership smoke passed: enter/exit, stolen restrictions, El Faro " +
+                "registration payment and family arsenal unlock verified.");
+            exitCode = 0;
+        }
+        catch (Exception exception)
+        {
+            GD.PushError($"Vehicle ownership smoke failed: {exception}");
         }
         finally
         {

@@ -48,7 +48,7 @@ perdigones, alcance 22, cargador de cinco cartuchos, reserva inicial de 20, cade
 
 El formato sube a versión 6. Para cada arma se guarda cargador, reserva y ubicación
 estable (`weapon-slot.sidearm`, `weapon-slot.long-gun` o
-`vehicle.family.reinforcement.trunk`). También se guardan el arma equipada y el estado
+`vehicle.family-arsenal`). También se guardan el arma equipada y el estado
 enfundado. Las versiones 1 a 5 se migran con pistola equipada y escopeta en el vehículo.
 
 ## Validación
@@ -67,8 +67,5 @@ Codex mientras conserve ese problema.
 
 ## Próximo incremento recomendado
 
-Construir el primer **vehículo conducible y sistema de propiedad de autos**: entrar/salir,
-conducción arcade isométrica, identificación de vehículo robado frente a familiar y un
-garaje de El Faro que permita registrar un auto. Eso hará que la regla del arsenal tenga
-consecuencias sistémicas: sólo los autos registrados compartirán acceso a las armas de la
-familia.
+Este incremento ya fue completado en la etapa siguiente, documentada en
+`Stage15DriveableVehiclesAndGarage.md`.

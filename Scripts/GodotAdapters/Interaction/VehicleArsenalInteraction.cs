@@ -2,6 +2,7 @@ using Godot;
 using Omerta.Application.Interaction;
 using Omerta.GodotAdapters.Combat;
 using Omerta.Presentation;
+using Omerta.GodotAdapters.Vehicles;
 
 namespace Omerta.GodotAdapters.Interaction;
 
@@ -10,7 +11,9 @@ public sealed partial class VehicleArsenalInteraction : Area3D, IInteractable
     private PlayerWeaponLoadoutController? _loadout;
     private HudController? _hud;
 
-    public bool CanInteract => GetParent<Node3D>().Visible && ResolveLoadout() is not null;
+    private DriveableVehicleController Vehicle => GetParent<DriveableVehicleController>();
+
+    public bool CanInteract => Vehicle.CanUseArsenal && ResolveLoadout() is not null;
 
     public string InteractionPrompt => ResolveLoadout()?.IsLongGunCarried == true
         ? "Guardar escopeta en el baúl"

@@ -2,6 +2,7 @@ using Godot;
 using Omerta.Application.Interaction;
 using Omerta.GodotAdapters.Input;
 using Omerta.Presentation;
+using Omerta.GodotAdapters.Characters;
 
 namespace Omerta.GodotAdapters.Interaction;
 
@@ -11,6 +12,7 @@ public sealed partial class PlayerInteractor : Node
     private PlayerInputAdapter? _input;
     private HudController? _hud;
     private IInteractable? _current;
+    private PlayerController? _player;
 
     public override void _Ready()
     {
@@ -21,6 +23,13 @@ public sealed partial class PlayerInteractor : Node
     public override void _PhysicsProcess(double delta)
     {
         ResolveDependencies();
+        if (_player?.IsDriving == true)
+        {
+            _current = null;
+            _hud?.SetInteractionPrompt("[E] SALIR DEL VEHÍCULO");
+            return;
+        }
+
         IInteractable? nearest = FindNearestInteractable();
         _current = nearest;
         _hud?.SetInteractionPrompt(
@@ -38,6 +47,7 @@ public sealed partial class PlayerInteractor : Node
     {
         _input ??= GetTree().GetFirstNodeInGroup("player_input") as PlayerInputAdapter;
         _hud ??= GetTree().GetFirstNodeInGroup("hud") as HudController;
+        _player ??= GetTree().GetFirstNodeInGroup("player") as PlayerController;
     }
 
     private IInteractable? FindNearestInteractable()

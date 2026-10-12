@@ -25,6 +25,7 @@
 | Bar La Niebla | Propietario y estado del punto operativo |
 | Depósito San Telmo | Propietario y estado del punto operativo |
 | Misiones | Fase y recompensa de conquista, sabotaje y defensa de El Faro |
+| Vehículos | Posición, rotación y pertenencia familiar de autos persistentes |
 
 El estado disponible del comerciante se deriva de su salud al cargar. La posibilidad de
 exigir una rendición forzada se deriva de la salud del defensor. Así se evita guardar el
@@ -51,7 +52,7 @@ mismo hecho dos veces.
 ## Validación
 
 - Compilación de juego y tests sin errores ni advertencias.
-- 45 tests NUnit aprobados en el estado actual del proyecto.
+- 50 tests NUnit aprobados en el estado actual del proyecto.
 - Round trip JSON y rechazo explícito de versiones incompatibles.
 - Reemplazo atómico de archivo y limpieza del temporal.
 - Prueba integrada headless: guardar, alterar dinero, pose, salud, munición y negocio,
@@ -60,10 +61,11 @@ mismo hecho dos veces.
 
 ## Ampliación posterior
 
-El formato actual es versión 6 e incluye Bar La Niebla, Depósito San Telmo, las tres
-misiones de campaña y el loadout limitado del protagonista. Las partidas de versión 1 a
-5 se migran conservando sus datos existentes; la escopeta nueva comienza dentro del baúl
-del vehículo familiar y la pistola queda equipada. La ausencia de un negocio incorporado
-después se interpreta como su estado inicial, sin inventar avance ni recompensas. El
-controlador de South District se deriva de los propietarios de sus tres negocios y por
-eso no se serializa por separado.
+El formato actual es versión 7 e incluye Bar La Niebla, Depósito San Telmo, las tres
+misiones de campaña, el loadout limitado y los vehículos persistentes. Las partidas de
+versión 1 a 6 se migran conservando sus datos existentes; la escopeta nueva comienza en
+el arsenal vehicular compartido y la pistola queda equipada. Los guardados anteriores a
+la propiedad vehicular comienzan con el sedán de calle sin registrar. La ausencia de un
+negocio incorporado después se interpreta como su estado inicial, sin inventar avance ni
+recompensas. El controlador de South District se deriva de los propietarios de sus tres
+negocios y por eso no se serializa por separado.

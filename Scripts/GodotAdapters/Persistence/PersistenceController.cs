@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using Godot;
 using Omerta.Domain.Missions;
@@ -14,6 +15,7 @@ using Omerta.GodotAdapters.Missions;
 using Omerta.GodotAdapters.StageFive;
 using Omerta.Infrastructure.Persistence;
 using Omerta.Presentation;
+using Omerta.GodotAdapters.Vehicles;
 
 namespace Omerta.GodotAdapters.Persistence;
 
@@ -41,6 +43,7 @@ public sealed partial class PersistenceController : Node
     private SabotageMissionController? _sabotageMission;
     private bool _recoveryScheduled;
     private bool _runSmokeTest;
+    private readonly List<DriveableVehicleController> _persistentVehicles = new();
 
     public bool HasSave => _storage?.Exists == true;
 
@@ -73,6 +76,7 @@ public sealed partial class PersistenceController : Node
         _playerCombatant = _player.GetNode<Combatant>("Combatant");
         _playerWeapons = _player.GetNode<PlayerWeaponLoadoutController>("WeaponLoadout");
         _rivalCombatant = _rival.GetNode<Combatant>("Combatant");
+        ResolvePersistentVehicles();
         foreach (string argument in OS.GetCmdlineUserArgs())
         {
             if (argument == "--persistence-smoke")
@@ -178,6 +182,28 @@ public sealed partial class PersistenceController : Node
             MagazineAmmo = _playerWeapons.LongGunController.Runtime.AmmoInMagazine,
             ReserveAmmo = _playerWeapons.LongGunController.Runtime.ReserveAmmo
         });
+        foreach (DriveableVehicleController vehicle in _persistentVehicles)
+        {
+            Quaternion vehicleRotation = vehicle.GlobalBasis.GetRotationQuaternion();
+            data.Vehicles.Add(new VehicleSaveData
+            {
+                VehicleId = vehicle.VehicleId,
+                IsFamilyOwned = vehicle.IsFamilyOwned,
+                Position = new Vector3SaveData
+                {
+                    X = vehicle.GlobalPosition.X,
+                    Y = vehicle.GlobalPosition.Y,
+                    Z = vehicle.GlobalPosition.Z
+                },
+                Rotation = new QuaternionSaveData
+                {
+                    X = vehicleRotation.X,
+                    Y = vehicleRotation.Y,
+                    Z = vehicleRotation.Z,
+                    W = vehicleRotation.W
+                }
+            });
+        }
         data.Missions.Add(_stageFive!.CreateMissionSaveData());
         data.Missions.Add(_sabotageMission!.CreateMissionSaveData());
         data.Missions.Add(_stageFive.CreateDefenseMissionSaveData());
@@ -190,6 +216,7 @@ public sealed partial class PersistenceController : Node
         ValidatedRestore restore = Validate(data);
         _stageFive!.PrepareForLoad();
         _sabotageMission!.PrepareForLoad();
+        RestoreVehicles(data.Vehicles);
         _player!.RestorePersistentPose(restore.PlayerPosition, restore.PlayerRotation);
         _economy!.RestoreBalance(data.Economy.Balance);
         _rival!.RestorePersistentState(restore.RivalHealth);
@@ -220,6 +247,12 @@ public sealed partial class PersistenceController : Node
 
     public bool SaveNow()
     {
+        if (_player?.IsDriving == true)
+        {
+            _hud?.ShowStatus("Bajá del vehículo antes de guardar la partida.", 4.0f);
+            return false;
+        }
+
         try
         {
             EnsureReady();
@@ -317,6 +350,13 @@ public sealed partial class PersistenceController : Node
 
             _economy!.Economy.AddMoney(17);
             _player!.GlobalPosition += new Vector3(3.0f, 0.0f, 3.0f);
+            if (_persistentVehicles.Count > 0)
+            {
+                DriveableVehicleController vehicle = _persistentVehicles[0];
+                vehicle.Ownership.Restore(!vehicle.IsFamilyOwned);
+                vehicle.GlobalPosition += new Vector3(2.0f, 0.0f, -2.0f);
+            }
+
             _playerWeapons.ResetLoadout();
             _playerCombat!.RestoreCombat(50, 1, 2);
             _rival!.RestorePersistentState(0);
@@ -479,6 +519,7 @@ public sealed partial class PersistenceController : Node
         MissionProgressSaveData? sabotageMission = _sabotageMission!.ValidateMissionProgress(
             data.Missions,
             barBusiness?.IsCriticalAssetOperational ?? true);
+        ValidateVehicleStates(data.Vehicles);
         ValidateWeapon(pistol, _playerWeapons.SidearmController.Runtime, WeaponSlotIds.Sidearm);
         ValidateWeapon(
             shotgun,
@@ -686,6 +727,81 @@ public sealed partial class PersistenceController : Node
         }
 
         return description;
+    }
+
+    private void ResolvePersistentVehicles()
+    {
+        foreach (Node node in GetTree().GetNodesInGroup("driveable_vehicle"))
+        {
+            if (node is DriveableVehicleController vehicle && vehicle.PersistState &&
+                !_persistentVehicles.Contains(vehicle))
+            {
+                _persistentVehicles.Add(vehicle);
+            }
+        }
+    }
+
+    private void ValidateVehicleStates(List<VehicleSaveData> states)
+    {
+        HashSet<string> seen = new(StringComparer.Ordinal);
+        foreach (VehicleSaveData state in states)
+        {
+            if (!seen.Add(state.VehicleId))
+            {
+                throw new InvalidDataException(
+                    $"Vehicle '{state.VehicleId}' is duplicated in the save.");
+            }
+
+            DriveableVehicleController? vehicle = _persistentVehicles.Find(
+                candidate => candidate.VehicleId == state.VehicleId);
+            if (vehicle is null)
+            {
+                throw new InvalidDataException($"Unknown saved vehicle '{state.VehicleId}'.");
+            }
+
+            if (state.Position is null || state.Rotation is null)
+            {
+                throw new InvalidDataException($"Vehicle '{state.VehicleId}' has no pose.");
+            }
+
+            Vector3 position = new(state.Position.X, state.Position.Y, state.Position.Z);
+            Quaternion rotation = new(
+                state.Rotation.X,
+                state.Rotation.Y,
+                state.Rotation.Z,
+                state.Rotation.W);
+            if (!position.IsFinite() || !rotation.IsFinite() || rotation.LengthSquared() < 0.0001f)
+            {
+                throw new InvalidDataException($"Vehicle '{state.VehicleId}' has an invalid pose.");
+            }
+        }
+    }
+
+    private void RestoreVehicles(List<VehicleSaveData> states)
+    {
+        foreach (DriveableVehicleController vehicle in _persistentVehicles)
+        {
+            vehicle.ResetPersistentState();
+        }
+
+        foreach (VehicleSaveData state in states)
+        {
+            DriveableVehicleController? vehicle = _persistentVehicles.Find(
+                candidate => candidate.VehicleId == state.VehicleId);
+            if (vehicle is null)
+            {
+                continue;
+            }
+
+            vehicle.RestorePersistentState(
+                new Vector3(state.Position.X, state.Position.Y, state.Position.Z),
+                new Quaternion(
+                    state.Rotation.X,
+                    state.Rotation.Y,
+                    state.Rotation.Z,
+                    state.Rotation.W),
+                state.IsFamilyOwned);
+        }
     }
 
     private void EnsureReady()

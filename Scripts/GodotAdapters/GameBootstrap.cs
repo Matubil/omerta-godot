@@ -11,6 +11,7 @@ using Omerta.GodotAdapters.Missions;
 using Omerta.GodotAdapters.StageFive;
 using Omerta.GodotAdapters.Territories;
 using Omerta.Presentation;
+using Omerta.GodotAdapters.Vehicles;
 
 namespace Omerta.GodotAdapters;
 
@@ -107,6 +108,14 @@ public sealed partial class GameBootstrap : Node3D
         _economy?.ResetEconomy();
         _stageFive?.ResetStageFiveEncounter();
         _sabotageMission?.ResetEncounter();
+        foreach (Node node in GetTree().GetNodesInGroup("driveable_vehicle"))
+        {
+            if (node is DriveableVehicleController vehicle && vehicle.PersistState)
+            {
+                vehicle.ResetPersistentState();
+            }
+        }
+
         _hud?.ShowStatus("Encuentro reiniciado.");
     }
 

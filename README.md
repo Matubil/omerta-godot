@@ -15,12 +15,12 @@ Abrir `project.godot` con la edición .NET de Godot 4.7.2 y ejecutar el proyecto
 
 | Control | Acción |
 | --- | --- |
-| `WASD` | Movimiento relativo a cámara |
+| `WASD` | Movimiento relativo a cámara / conducción arcade |
 | `Shift` | Sprint |
 | `Ctrl` o `C` | Alternar crouch |
 | `Espacio` | Vault contextual sobre obstáculos bajos |
 | `Alt` | Entrar o salir de cobertura |
-| `E` | Interactuar |
+| `E` | Interactuar / entrar o salir de un vehículo |
 | Botón derecho | ADS |
 | Botón izquierdo | Disparar |
 | `R` | Recargar |
@@ -82,6 +82,12 @@ refuerzos: se retira o devuelve desde su baúl con `E`, conserva su munición y 
 en la espalda cuando se transporta sin estar equipada. Los autos comunes no acceden al
 arsenal; esa capacidad queda reservada para vehículos propios o de la familia.
 
+Hay un sedán robado conducible en la calle. Puede usarse de inmediato con `E` y `WASD`,
+pero su baúl no accede al arsenal. Después de conquistar y reparar El Faro se puede
+estacionar dentro de su garaje y pagar $75 para registrarlo: cambia a vehículo familiar,
+habilita el baúl compartido y conserva posición y propiedad al guardar/cargar. El auto de
+refuerzos utiliza la misma conducción una vez que termina su llegada y baja la crew.
+
 La partida manual se guarda como JSON versionado bajo `user://save_0.json`. Conserva
 pose, salud, munición, economía, propiedad y operatividad de los tres negocios, y
 progreso de misión. Tras una
@@ -126,3 +132,6 @@ La misión defensiva urgente de Taller El Faro está detallada en
 
 El loadout limitado y el arsenal del vehículo familiar están detallados en
 [`Documentation/Stage14WeaponLoadoutAndVehicleArsenal.md`](Documentation/Stage14WeaponLoadoutAndVehicleArsenal.md).
+
+La conducción, propiedad de autos y el garaje de El Faro están detallados en
+[`Documentation/Stage15DriveableVehiclesAndGarage.md`](Documentation/Stage15DriveableVehiclesAndGarage.md).

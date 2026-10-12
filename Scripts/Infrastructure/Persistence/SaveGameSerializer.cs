@@ -44,7 +44,7 @@ public sealed class SaveGameSerializer
         {
             data.Missions = new();
         }
-        else if (sourceVersion is not (2 or 3 or 4 or 5 or SaveGameData.CurrentVersion))
+        else if (sourceVersion is not (2 or 3 or 4 or 5 or 6 or SaveGameData.CurrentVersion))
         {
             throw new SaveGameVersionException(sourceVersion, SaveGameData.CurrentVersion);
         }
@@ -57,10 +57,26 @@ public sealed class SaveGameSerializer
         data.PlayerPose.Rotation ??= new QuaternionSaveData();
         data.PlayerWeapons ??= new PlayerWeaponsSaveData();
         data.PlayerWeapons.Weapons ??= new();
+        data.Vehicles ??= new();
         data.Missions ??= new();
         if (sourceVersion <= 5)
         {
             MigrateWeaponLoadout(data.PlayerWeapons);
+        }
+        else if (sourceVersion == 6)
+        {
+            foreach (WeaponSaveData weapon in data.PlayerWeapons.Weapons)
+            {
+                if (weapon.LocationId == "vehicle.family.reinforcement.trunk")
+                {
+                    weapon.LocationId = WeaponSlotIds.FamilyVehicleTrunk;
+                }
+            }
+        }
+
+        if (sourceVersion <= 6)
+        {
+            data.Vehicles = new();
         }
 
         data.Version = SaveGameData.CurrentVersion;

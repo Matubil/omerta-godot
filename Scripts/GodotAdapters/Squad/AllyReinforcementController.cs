@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Godot;
 using Omerta.GodotAdapters.Navigation;
 using Omerta.Presentation;
+using Omerta.GodotAdapters.Vehicles;
 
 namespace Omerta.GodotAdapters.Squad;
 
@@ -23,7 +24,7 @@ public sealed partial class AllyReinforcementController : Node
     [Export]
     public float VehicleSpeed { get; set; } = 7.0f;
 
-    private Node3D? _vehicle;
+    private DriveableVehicleController? _vehicle;
     private NavigationAgent3D? _vehicleNavigation;
     private readonly List<SquadCompanionController> _passengers = new();
     private SquadCommander? _commander;
@@ -34,7 +35,7 @@ public sealed partial class AllyReinforcementController : Node
     public override void _Ready()
     {
         AddToGroup("reinforcement_service");
-        _vehicle = GetParent().GetNode<Node3D>("ReinforcementVehicle");
+        _vehicle = GetParent().GetNode<DriveableVehicleController>("ReinforcementVehicle");
         _vehicleNavigation = _vehicle.GetNode<NavigationAgent3D>("NavigationAgent3D");
         ResolvePassengers();
         _commander = GetTree().GetFirstNodeInGroup("squad_commander") as SquadCommander;
@@ -77,6 +78,7 @@ public sealed partial class AllyReinforcementController : Node
         _hud ??= GetTree().GetFirstNodeInGroup("hud") as HudController;
         _vehicle.GlobalPosition = RouteStart;
         _vehicle.Visible = true;
+        _vehicle.SetDriveEnabled(false);
         if (_vehicleNavigation is not null)
         {
             _vehicleNavigation.TargetPosition = RouteDestination;
@@ -92,6 +94,7 @@ public sealed partial class AllyReinforcementController : Node
         Status = AllyReinforcementStatus.Available;
         if (_vehicle is not null)
         {
+            _vehicle.SetDriveEnabled(false);
             _vehicle.GlobalPosition = RouteStart;
             _vehicle.Visible = false;
             if (_vehicleNavigation is not null)
@@ -125,6 +128,7 @@ public sealed partial class AllyReinforcementController : Node
         }
 
         Status = AllyReinforcementStatus.Arrived;
+        _vehicle.SetDriveEnabled(true);
         _hud?.ShowStatus("El vehículo llegó. Dos aliados se suman a la crew.", 4.0f);
     }
 

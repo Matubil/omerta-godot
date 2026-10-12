@@ -50,8 +50,14 @@ public sealed partial class PlayerCombatController : Node
     public override void _Process(double delta)
     {
         ResolveDependencies();
-        if (_input is null || _combatant is null || _weapons is null)
+        if (_input is null || _combatant is null || _weapons is null || _player is null)
         {
+            return;
+        }
+
+        if (_player.IsDriving)
+        {
+            SetAiming(false);
             return;
         }
 

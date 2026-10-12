@@ -28,6 +28,10 @@ public sealed class PersistenceTests
         Assert.That(restored.PlayerWeapons.EquippedWeaponId, Is.EqualTo("weapon.prototype-shotgun"));
         Assert.That(restored.PlayerWeapons.IsHolstered, Is.True);
         Assert.That(restored.PlayerWeapons.Weapons[1].LocationId, Is.EqualTo(WeaponSlotIds.LongGun));
+        Assert.That(restored.Vehicles, Has.Count.EqualTo(1));
+        Assert.That(restored.Vehicles[0].VehicleId, Is.EqualTo("vehicle.stolen.street-sedan"));
+        Assert.That(restored.Vehicles[0].IsFamilyOwned, Is.True);
+        Assert.That(restored.Vehicles[0].Position.Z, Is.EqualTo(-8.0f));
         Assert.That(restored.Missions[0].MissionId, Is.EqualTo("mission.el-faro-takeover"));
         Assert.That(restored.Missions[0].Status, Is.EqualTo("TakeControl"));
         Assert.That(restored.Businesses[1].BusinessId, Is.EqualTo("business.la-niebla-bar"));
@@ -57,7 +61,7 @@ public sealed class PersistenceTests
     {
         SaveGameSerializer serializer = new();
         string oldJson = serializer.Serialize(CreateSaveGame())
-            .Replace("\"version\": 6", "\"version\": 1");
+            .Replace("\"version\": 7", "\"version\": 1");
 
         SaveGameData migrated = serializer.Deserialize(oldJson);
 
@@ -66,6 +70,7 @@ public sealed class PersistenceTests
         Assert.That(migrated.Economy.Balance, Is.EqualTo(350));
         Assert.That(migrated.PlayerWeapons.EquippedWeaponId, Is.EqualTo("weapon.prototype-pistol"));
         Assert.That(migrated.PlayerWeapons.Weapons[1].LocationId, Is.EqualTo(WeaponSlotIds.FamilyVehicleTrunk));
+        Assert.That(migrated.Vehicles, Is.Empty);
     }
 
     [Test]
@@ -77,7 +82,7 @@ public sealed class PersistenceTests
         legacy.CharacterCombatStates.RemoveAt(3);
         legacy.Missions.RemoveRange(1, 2);
         string oldJson = serializer.Serialize(legacy)
-            .Replace("\"version\": 6", "\"version\": 2");
+            .Replace("\"version\": 7", "\"version\": 2");
 
         SaveGameData migrated = serializer.Deserialize(oldJson);
 
@@ -95,7 +100,7 @@ public sealed class PersistenceTests
         legacy.CharacterCombatStates.RemoveAt(3);
         legacy.Missions.RemoveAt(2);
         string oldJson = serializer.Serialize(legacy)
-            .Replace("\"version\": 6", "\"version\": 3");
+            .Replace("\"version\": 7", "\"version\": 3");
 
         SaveGameData migrated = serializer.Deserialize(oldJson);
 
@@ -112,7 +117,7 @@ public sealed class PersistenceTests
         SaveGameData legacy = CreateSaveGame();
         legacy.Missions.RemoveAt(2);
         string oldJson = serializer.Serialize(legacy)
-            .Replace("\"version\": 6", "\"version\": 4");
+            .Replace("\"version\": 7", "\"version\": 4");
 
         SaveGameData migrated = serializer.Deserialize(oldJson);
 
@@ -135,6 +140,8 @@ public sealed class PersistenceTests
         Assert.That(json, Does.Not.Contain("Companion"));
         Assert.That(json, Does.Not.Contain("Counterattack"));
         Assert.That(json, Does.Not.Contain("Territory"));
+        Assert.That(json, Does.Not.Contain("Driver"));
+        Assert.That(json, Does.Not.Contain("CurrentSpeed"));
     }
 
     [Test]
@@ -146,7 +153,7 @@ public sealed class PersistenceTests
         legacy.PlayerWeapons.EquippedWeaponId = string.Empty;
         legacy.PlayerWeapons.IsHolstered = false;
         string oldJson = serializer.Serialize(legacy)
-            .Replace("\"version\": 6", "\"version\": 5");
+            .Replace("\"version\": 7", "\"version\": 5");
 
         SaveGameData migrated = serializer.Deserialize(oldJson);
 
@@ -155,6 +162,24 @@ public sealed class PersistenceTests
         Assert.That(migrated.PlayerWeapons.Weapons[1].WeaponId, Is.EqualTo("weapon.prototype-shotgun"));
         Assert.That(migrated.PlayerWeapons.Weapons[1].LocationId, Is.EqualTo(WeaponSlotIds.FamilyVehicleTrunk));
         Assert.That(migrated.PlayerWeapons.EquippedWeaponId, Is.EqualTo("weapon.prototype-pistol"));
+    }
+
+    [Test]
+    public void VersionSixSaveMigratesSharedArsenalAndStartsWithoutRegisteredCars()
+    {
+        SaveGameSerializer serializer = new();
+        SaveGameData legacy = CreateSaveGame();
+        legacy.PlayerWeapons.Weapons[1].LocationId = "vehicle.family.reinforcement.trunk";
+        string oldJson = serializer.Serialize(legacy)
+            .Replace("\"version\": 7", "\"version\": 6");
+
+        SaveGameData migrated = serializer.Deserialize(oldJson);
+
+        Assert.That(migrated.Version, Is.EqualTo(SaveGameData.CurrentVersion));
+        Assert.That(
+            migrated.PlayerWeapons.Weapons[1].LocationId,
+            Is.EqualTo(WeaponSlotIds.FamilyVehicleTrunk));
+        Assert.That(migrated.Vehicles, Is.Empty);
     }
 
     [Test]
@@ -282,6 +307,13 @@ public sealed class PersistenceTests
             LocationId = WeaponSlotIds.LongGun,
             MagazineAmmo = 4,
             ReserveAmmo = 20
+        });
+        data.Vehicles.Add(new VehicleSaveData
+        {
+            VehicleId = "vehicle.stolen.street-sedan",
+            IsFamilyOwned = true,
+            Position = new Vector3SaveData { X = 2.5f, Y = 0.45f, Z = -8.0f },
+            Rotation = new QuaternionSaveData { Y = 0.70710677f, W = 0.70710677f }
         });
         data.Missions.Add(new MissionProgressSaveData
         {

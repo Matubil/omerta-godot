@@ -3,6 +3,7 @@ using Omerta.GodotAdapters.Camera;
 using Omerta.GodotAdapters.Combat;
 using Omerta.GodotAdapters.Input;
 using Omerta.GodotAdapters.World;
+using Omerta.GodotAdapters.Vehicles;
 using Omerta.Presentation;
 
 namespace Omerta.GodotAdapters.Characters;
@@ -47,6 +48,9 @@ public sealed partial class PlayerController : CharacterBody3D
     private PlayerCoverController? _cover;
     private bool _isCrouched;
     private bool _isAiming;
+    private DriveableVehicleController? _currentVehicle;
+    private uint _standingCollisionLayer;
+    private uint _standingCollisionMask;
 
     public bool IsCrouched => _isCrouched;
 
@@ -59,6 +63,8 @@ public sealed partial class PlayerController : CharacterBody3D
     public float CollisionRadius => _capsule?.Radius ?? 0.35f;
 
     public float CurrentPlanarSpeed => new Vector2(Velocity.X, Velocity.Z).Length();
+
+    public bool IsDriving => _currentVehicle is not null;
 
     public override void _Ready()
     {
@@ -74,6 +80,8 @@ public sealed partial class PlayerController : CharacterBody3D
         _combatant = GetNodeOrNull<Combatant>("Combatant");
         _traversal = GetNode<PlayerTraversalController>("PlayerTraversalController");
         _cover = GetNode<PlayerCoverController>("PlayerCoverController");
+        _standingCollisionLayer = CollisionLayer;
+        _standingCollisionMask = CollisionMask;
         ApplyStanceDimensions();
     }
 
@@ -82,6 +90,13 @@ public sealed partial class PlayerController : CharacterBody3D
         ResolveDependencies();
         if (_input is null)
         {
+            return;
+        }
+
+        if (IsDriving)
+        {
+            Velocity = Vector3.Zero;
+            _hud?.SetMovementState(false, false, "CONDUCIENDO");
             return;
         }
 
@@ -210,6 +225,52 @@ public sealed partial class PlayerController : CharacterBody3D
 
     public void SetAiming(bool aiming) => _isAiming = aiming;
 
+    public void EnterVehicleMode(DriveableVehicleController vehicle)
+    {
+        _currentVehicle = vehicle;
+        _isAiming = false;
+        _traversal?.ResetTraversal();
+        _cover?.ExitCover();
+        _cameraRig?.SetCover(false, false);
+        _cameraRig?.SetAiming(false);
+        Velocity = Vector3.Zero;
+        if (_visual is not null)
+        {
+            _visual.Visible = false;
+        }
+
+        CollisionLayer = 0;
+        CollisionMask = 0;
+        _collision?.SetDeferred(CollisionShape3D.PropertyName.Disabled, true);
+    }
+
+    public void SynchronizeWithVehicle(Vector3 position, float yaw)
+    {
+        if (!IsDriving)
+        {
+            return;
+        }
+
+        GlobalPosition = position;
+        Rotation = new Vector3(0.0f, yaw, 0.0f);
+    }
+
+    public void ExitVehicleMode(Vector3 position)
+    {
+        _currentVehicle = null;
+        GlobalPosition = position;
+        Velocity = Vector3.Zero;
+        CollisionLayer = _standingCollisionLayer;
+        CollisionMask = _standingCollisionMask;
+        _collision?.SetDeferred(CollisionShape3D.PropertyName.Disabled, false);
+        if (_visual is not null)
+        {
+            _visual.Visible = true;
+        }
+    }
+
+    public void ForceLeaveCurrentVehicle() => _currentVehicle?.ForceExitDriver();
+
     public bool TryStandForTraversal()
     {
         if (!_isCrouched)
@@ -231,6 +292,7 @@ public sealed partial class PlayerController : CharacterBody3D
 
     public void ResetForEncounter(Vector3 position, Vector3 rotation)
     {
+        ForceLeaveCurrentVehicle();
         GlobalPosition = position;
         Rotation = rotation;
         Velocity = Vector3.Zero;
@@ -248,6 +310,7 @@ public sealed partial class PlayerController : CharacterBody3D
 
     public void RestorePersistentPose(Vector3 position, Quaternion rotation)
     {
+        ForceLeaveCurrentVehicle();
         Velocity = Vector3.Zero;
         _isAiming = false;
         _traversal?.ResetTraversal();
