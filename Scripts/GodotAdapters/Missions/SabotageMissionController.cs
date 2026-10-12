@@ -296,7 +296,8 @@ public sealed partial class SabotageMissionController : Node3D
     private void RefreshHud()
     {
         ResolveHud();
-        if (_mission is null || _mission.Status == BusinessSabotageMissionStatus.Locked)
+        if (_mission is null || _mission.Status == BusinessSabotageMissionStatus.Locked ||
+            _prerequisite?.HasActiveDefenseMission == true)
         {
             return;
         }

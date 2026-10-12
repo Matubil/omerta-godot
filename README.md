@@ -5,7 +5,7 @@ Reconstrucción en Godot 4.7.2 .NET del vertical slice original de Unity.
 - Nombre técnico y namespace: `Omerta`
 - Lenguaje principal: C#
 - Plataforma inicial: Windows
-- Estado actual: Etapas 0 a 6 + navegación, cámara, traversal y control territorial 2 de 3
+- Estado actual: Etapas 0 a 6 + navegación, traversal, territorio y tres misiones
 
 ## Ejecutar
 
@@ -43,7 +43,10 @@ compañero sigue al protagonista y acepta órdenes puntuales; el teléfono públ
 dos aliados que llegan físicamente en vehículo. Los disparos próximos a un testigo
 generan un patrullero, búsqueda por última posición conocida y la opción contextual de
 sobornar al agente. Una conquista operativa también programa una represalia rival que
-puede sabotear el taller, pero nunca transferir su propiedad.
+ahora funciona como misión defensiva urgente: hay 12 segundos de aviso, llegan dos
+atacantes físicos y deben ser eliminados antes de completar 6 segundos de sabotaje. La
+victoria paga $125 una sola vez; el fallo deja el taller inactivo sin transferir su
+propiedad, y repararlo permite reintentar la defensa.
 
 Después de conquistar El Faro se habilita un informante con un segundo encargo. Bar La
 Niebla tiene exterior e interior propios: la misión exige sabotear su punto operativo,
@@ -108,3 +111,6 @@ Bar La Niebla y su misión encadenada están detallados en
 
 Depósito San Telmo y el control territorial están detallados en
 [`Documentation/Stage12TerritoryControl.md`](Documentation/Stage12TerritoryControl.md).
+
+La misión defensiva urgente de Taller El Faro está detallada en
+[`Documentation/Stage13DefenseMission.md`](Documentation/Stage13DefenseMission.md).

@@ -143,9 +143,7 @@ public sealed class BusinessCounterattack : IDisposable
             return false;
         }
 
-        _operations.SabotageCriticalAsset();
-        Status = BusinessCounterattackStatus.Sabotaged;
-        Changed?.Invoke();
+        CompleteSabotage();
         return true;
     }
 
@@ -184,6 +182,17 @@ public sealed class BusinessCounterattack : IDisposable
         }
 
         Changed?.Invoke();
+        return true;
+    }
+
+    public bool ForceSabotage()
+    {
+        if (Status != BusinessCounterattackStatus.InProgress)
+        {
+            return false;
+        }
+
+        CompleteSabotage();
         return true;
     }
 
@@ -227,7 +236,8 @@ public sealed class BusinessCounterattack : IDisposable
             return;
         }
 
-        if (Status == BusinessCounterattackStatus.Inactive &&
+        if (Status is BusinessCounterattackStatus.Inactive or
+            BusinessCounterattackStatus.Sabotaged &&
             _business.OwnerId == _defendingFactionId)
         {
             Schedule();
@@ -251,6 +261,14 @@ public sealed class BusinessCounterattack : IDisposable
         Array.Clear(_attackerAtObjective);
         Changed?.Invoke();
         AttackersRequested?.Invoke();
+    }
+
+    private void CompleteSabotage()
+    {
+        _operations.SabotageCriticalAsset();
+        Status = BusinessCounterattackStatus.Sabotaged;
+        RemainingSabotageSeconds = 0.0f;
+        Changed?.Invoke();
     }
 
     private void ValidateIndex(int index)

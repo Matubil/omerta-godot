@@ -124,4 +124,29 @@ public sealed class StageFiveRulesTests
         Assert.That(operations.IsOperational, Is.True);
         Assert.That(business.OwnerId, Is.EqualTo(Player));
     }
+
+    [Test]
+    public void RepairingAfterFailedDefenseSchedulesRetry()
+    {
+        BusinessState business = new("business.el-faro", "Taller El Faro", Rival);
+        BusinessOperationsState operations = new(business.Id);
+        using BusinessCounterattack counterattack = new(
+            business,
+            operations,
+            Player,
+            12.0f,
+            6.0f,
+            2);
+
+        business.Capture(Player);
+        counterattack.Advance(12.0f);
+        Assert.That(counterattack.ForceSabotage(), Is.True);
+        Assert.That(counterattack.Status, Is.EqualTo(BusinessCounterattackStatus.Sabotaged));
+        Assert.That(operations.IsOperational, Is.False);
+
+        operations.RepairCriticalAsset();
+
+        Assert.That(counterattack.Status, Is.EqualTo(BusinessCounterattackStatus.Warning));
+        Assert.That(counterattack.RemainingWarningSeconds, Is.EqualTo(12.0f));
+    }
 }

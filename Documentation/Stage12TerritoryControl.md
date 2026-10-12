@@ -59,3 +59,6 @@ urgente**. El sistema ya crea el atacante y puede sabotear operaciones; el sigui
 paso es darle estados de misión, objetivo reactivo, temporizador legible, derrota y
 reintento, recompensa y persistencia. Esto completa la tercera misión prevista en el
 plan antes de ampliar armamento y arte.
+
+Este incremento quedó completado y está documentado en
+`Documentation/Stage13DefenseMission.md`.

@@ -167,6 +167,7 @@ public sealed partial class PersistenceController : Node
         });
         data.Missions.Add(_stageFive!.CreateMissionSaveData());
         data.Missions.Add(_sabotageMission!.CreateMissionSaveData());
+        data.Missions.Add(_stageFive.CreateDefenseMissionSaveData());
         return data;
     }
 
@@ -174,6 +175,7 @@ public sealed partial class PersistenceController : Node
     {
         EnsureReady();
         ValidatedRestore restore = Validate(data);
+        _stageFive!.PrepareForLoad();
         _sabotageMission!.PrepareForLoad();
         _player!.RestorePersistentPose(restore.PlayerPosition, restore.PlayerRotation);
         _economy!.RestoreBalance(data.Economy.Balance);
@@ -194,7 +196,7 @@ public sealed partial class PersistenceController : Node
             restore.PlayerHealth,
             restore.Weapon.MagazineAmmo,
             restore.Weapon.ReserveAmmo);
-        _stageFive!.RestoreAfterLoad(restore.Mission);
+        _stageFive.RestoreAfterLoad(restore.Mission, restore.DefenseMission);
         _sabotageMission!.RestoreAfterLoad(restore.SabotageMission);
     }
 
@@ -314,12 +316,19 @@ public sealed partial class PersistenceController : Node
                     "The restored runtime state differs from the saved state.");
             }
 
-            _stageFive!.RestoreAfterLoad(new MissionProgressSaveData
-            {
-                MissionId = StageFiveController.ElFaroMissionId,
-                Status = PropertyTakeoverMissionStatus.Completed.ToString(),
-                RewardGranted = true
-            });
+            _stageFive!.RestoreAfterLoad(
+                new MissionProgressSaveData
+                {
+                    MissionId = StageFiveController.ElFaroMissionId,
+                    Status = PropertyTakeoverMissionStatus.Completed.ToString(),
+                    RewardGranted = true
+                },
+                new MissionProgressSaveData
+                {
+                    MissionId = StageFiveController.DefenseMissionId,
+                    Status = BusinessDefenseMissionStatus.Succeeded.ToString(),
+                    RewardGranted = true
+                });
             _bar!.RestorePersistentState(_bar.Definition.InitialOwnerId, true);
             _sabotageMission!.RestoreAfterLoad(new MissionProgressSaveData
             {
@@ -357,8 +366,8 @@ public sealed partial class PersistenceController : Node
             }
 
             GD.Print(
-                "Persistence smoke passed: three businesses, merchant health and completed " +
-                "La Niebla sabotage save/mutation/exact restore verified.");
+                "Persistence smoke passed: three businesses, merchant health and three " +
+                "campaign missions save/mutation/exact restore verified.");
             exitCode = 0;
         }
         catch (Exception exception)
@@ -430,6 +439,9 @@ public sealed partial class PersistenceController : Node
         int depotMerchantHealth = FindOptionalHealth(data, depotMerchant);
         WeaponSaveData weapon = FindWeapon(data, _playerWeapon!.Runtime.Specification.Id);
         MissionProgressSaveData? mission = _stageFive!.ValidateMissionProgress(data.Missions);
+        MissionProgressSaveData? defenseMission = _stageFive.ValidateDefenseMissionProgress(
+            data.Missions,
+            business.IsCriticalAssetOperational);
         MissionProgressSaveData? sabotageMission = _sabotageMission!.ValidateMissionProgress(
             data.Missions,
             barBusiness?.IsCriticalAssetOperational ?? true);
@@ -464,6 +476,7 @@ public sealed partial class PersistenceController : Node
             depotMerchantHealth,
             weapon,
             mission,
+            defenseMission,
             sabotageMission,
             position,
             rotation.Normalized());
@@ -631,6 +644,7 @@ public sealed partial class PersistenceController : Node
         int DepotMerchantHealth,
         WeaponSaveData Weapon,
         MissionProgressSaveData? Mission,
+        MissionProgressSaveData? DefenseMission,
         MissionProgressSaveData? SabotageMission,
         Vector3 PlayerPosition,
         Quaternion PlayerRotation);

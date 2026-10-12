@@ -56,3 +56,9 @@ y completa esa fase, otorgando entonces la recompensa pendiente una sola vez.
 - 23 pruebas automatizadas de dominio y persistencia.
 - Importación y arranque de la escena principal en Godot 4.7.2 .NET headless.
 - Smoke test de guardado, mutación y restauración exacta con el esquema versión 2.
+
+## Ampliación posterior
+
+La represalia inicial de un atacante fue convertida en una misión urgente de dos
+atacantes, con recompensa, fallo, reparación/reintento y persistencia terminal. El
+estado actual se documenta en `Documentation/Stage13DefenseMission.md`.

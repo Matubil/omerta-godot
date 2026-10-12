@@ -24,7 +24,7 @@
 | Taller El Faro | Propietario y estado del punto operativo |
 | Bar La Niebla | Propietario y estado del punto operativo |
 | Depósito San Telmo | Propietario y estado del punto operativo |
-| Misiones | Fase y recompensa de El Faro y La Niebla |
+| Misiones | Fase y recompensa de conquista, sabotaje y defensa de El Faro |
 
 El estado disponible del comerciante se deriva de su salud al cargar. La posibilidad de
 exigir una rendición forzada se deriva de la salud del defensor. Así se evita guardar el
@@ -51,7 +51,7 @@ mismo hecho dos veces.
 ## Validación
 
 - Compilación de juego y tests sin errores ni advertencias.
-- 34 tests NUnit aprobados en el estado actual del proyecto.
+- 40 tests NUnit aprobados en el estado actual del proyecto.
 - Round trip JSON y rechazo explícito de versiones incompatibles.
 - Reemplazo atómico de archivo y limpieza del temporal.
 - Prueba integrada headless: guardar, alterar dinero, pose, salud, munición y negocio,
@@ -60,8 +60,8 @@ mismo hecho dos veces.
 
 ## Ampliación posterior
 
-El formato actual es versión 4 e incluye Bar La Niebla, Depósito San Telmo y la misión
-encadenada de sabotaje. Las partidas de versión 1, 2 y 3 se migran conservando sus datos
+El formato actual es versión 5 e incluye Bar La Niebla, Depósito San Telmo y las tres
+misiones de campaña. Las partidas de versión 1, 2, 3 y 4 se migran conservando sus datos
 existentes; la ausencia de un negocio incorporado después se interpreta como su estado
 inicial, sin inventar avance ni recompensas. El controlador de South District se deriva
 de los propietarios de sus tres negocios y por eso no se serializa por separado.

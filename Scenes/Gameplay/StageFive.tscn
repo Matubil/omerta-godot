@@ -209,6 +209,9 @@ position = Vector3(18, 0.05, 18)
 [node name="Counterattacker" parent="." instance=ExtResource("8_attacker")]
 position = Vector3(-17, 0.05, 15)
 
+[node name="Counterattacker2" parent="." instance=ExtResource("8_attacker")]
+position = Vector3(-15, 0.05, 17)
+
 [node name="SquadCommander" type="Node" parent="."]
 script = ExtResource("9_commander")
 

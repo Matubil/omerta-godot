@@ -31,6 +31,8 @@ public sealed class PersistenceTests
         Assert.That(restored.Businesses[2].BusinessId, Is.EqualTo("business.san-telmo-depot"));
         Assert.That(restored.CharacterCombatStates[3].CurrentHealth, Is.EqualTo(60));
         Assert.That(restored.Missions[1].MissionId, Is.EqualTo("mission.sabotage.la-niebla"));
+        Assert.That(restored.Missions[2].MissionId, Is.EqualTo("mission.defense.el-faro"));
+        Assert.That(restored.Missions[2].Status, Is.EqualTo("Succeeded"));
     }
 
     [Test]
@@ -52,7 +54,7 @@ public sealed class PersistenceTests
     {
         SaveGameSerializer serializer = new();
         string oldJson = serializer.Serialize(CreateSaveGame())
-            .Replace("\"version\": 4", "\"version\": 1");
+            .Replace("\"version\": 5", "\"version\": 1");
 
         SaveGameData migrated = serializer.Deserialize(oldJson);
 
@@ -68,9 +70,9 @@ public sealed class PersistenceTests
         SaveGameData legacy = CreateSaveGame();
         legacy.Businesses.RemoveRange(1, 2);
         legacy.CharacterCombatStates.RemoveAt(3);
-        legacy.Missions.RemoveAt(1);
+        legacy.Missions.RemoveRange(1, 2);
         string oldJson = serializer.Serialize(legacy)
-            .Replace("\"version\": 4", "\"version\": 2");
+            .Replace("\"version\": 5", "\"version\": 2");
 
         SaveGameData migrated = serializer.Deserialize(oldJson);
 
@@ -86,14 +88,31 @@ public sealed class PersistenceTests
         SaveGameData legacy = CreateSaveGame();
         legacy.Businesses.RemoveAt(2);
         legacy.CharacterCombatStates.RemoveAt(3);
+        legacy.Missions.RemoveAt(2);
         string oldJson = serializer.Serialize(legacy)
-            .Replace("\"version\": 4", "\"version\": 3");
+            .Replace("\"version\": 5", "\"version\": 3");
 
         SaveGameData migrated = serializer.Deserialize(oldJson);
 
         Assert.That(migrated.Version, Is.EqualTo(SaveGameData.CurrentVersion));
         Assert.That(migrated.Businesses, Has.Count.EqualTo(2));
         Assert.That(migrated.CharacterCombatStates, Has.Count.EqualTo(3));
+        Assert.That(migrated.Missions, Has.Count.EqualTo(2));
+    }
+
+    [Test]
+    public void VersionFourSaveMigratesWithoutInventingDefenseProgress()
+    {
+        SaveGameSerializer serializer = new();
+        SaveGameData legacy = CreateSaveGame();
+        legacy.Missions.RemoveAt(2);
+        string oldJson = serializer.Serialize(legacy)
+            .Replace("\"version\": 5", "\"version\": 4");
+
+        SaveGameData migrated = serializer.Deserialize(oldJson);
+
+        Assert.That(migrated.Version, Is.EqualTo(SaveGameData.CurrentVersion));
+        Assert.That(migrated.Missions, Has.Count.EqualTo(2));
     }
 
     [Test]
@@ -236,6 +255,12 @@ public sealed class PersistenceTests
         {
             MissionId = "mission.sabotage.la-niebla",
             Status = "Completed",
+            RewardGranted = true
+        });
+        data.Missions.Add(new MissionProgressSaveData
+        {
+            MissionId = "mission.defense.el-faro",
+            Status = "Succeeded",
             RewardGranted = true
         });
         return data;

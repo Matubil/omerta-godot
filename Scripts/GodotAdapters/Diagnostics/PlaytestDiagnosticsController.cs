@@ -39,6 +39,7 @@ public sealed partial class PlaytestDiagnosticsController : Node
     private bool _runTraversalSmokeTest;
     private bool _runBarSabotageSmokeTest;
     private bool _runTerritorySmokeTest;
+    private bool _runDefenseMissionSmokeTest;
     private int _barSabotageSmokeStage;
     private int _barSabotageWaitFrames = 120;
     private int _barBalanceBeforeSabotage;
@@ -96,6 +97,11 @@ public sealed partial class PlaytestDiagnosticsController : Node
                 _runTerritorySmokeTest = true;
                 _smokeFramesRemaining = 120;
             }
+            else if (argument == "--defense-mission-smoke")
+            {
+                _runDefenseMissionSmokeTest = true;
+                _smokeFramesRemaining = 120;
+            }
         }
     }
 
@@ -145,6 +151,11 @@ public sealed partial class PlaytestDiagnosticsController : Node
         {
             _runTerritorySmokeTest = false;
             RunTerritorySmokeTest();
+        }
+        else if (_runDefenseMissionSmokeTest && --_smokeFramesRemaining <= 0)
+        {
+            _runDefenseMissionSmokeTest = false;
+            RunDefenseMissionSmokeTest();
         }
     }
 
@@ -706,6 +717,88 @@ public sealed partial class PlaytestDiagnosticsController : Node
         }
     }
 
+    private void RunDefenseMissionSmokeTest()
+    {
+        int exitCode = 1;
+        try
+        {
+            ResolveDependencies();
+            Require(_stage is not null, "defense mission controller");
+            Require(_workshop is not null, "El Faro defense target");
+            Require(_economy is not null, "defense reward economy");
+
+            _workshop!.ResetBusinessEncounter();
+            _stage!.ResetStageFiveEncounter();
+            int balanceBeforeDefense = _economy!.Economy.Balance;
+            for (int interaction = 0; interaction < 4; interaction++)
+            {
+                _workshop.InteractWithMerchant();
+            }
+
+            Require(
+                _stage.DefenseMissionStatus == BusinessDefenseMissionStatus.Warning,
+                "urgent warning after El Faro capture");
+            Require(_stage.LivingCounterattackerCount == 0, "attackers wait during warning");
+            _stage.AdvanceDefenseForDiagnostics(_stage.CounterattackWarningDuration);
+            Require(
+                _stage.DefenseMissionStatus == BusinessDefenseMissionStatus.Defending,
+                "active defense after warning");
+            Require(_stage.LivingCounterattackerCount == 2, "two living attackers");
+            Require(_stage.ActiveCounterattackerCount == 2, "two physical attackers spawned");
+
+            Require(_stage.DefeatCounterattackerForDiagnostics(0), "first attacker defeated");
+            Require(_stage.LivingCounterattackerCount == 1, "one attacker remains");
+            Require(_stage.DefeatCounterattackerForDiagnostics(1), "second attacker defeated");
+            Require(
+                _stage.DefenseMissionStatus == BusinessDefenseMissionStatus.Succeeded,
+                "successful defense state");
+            Require(_stage.ActiveCounterattackerCount == 0, "temporary attackers cleaned up");
+            Require(_workshop.Operations.IsOperational, "El Faro remains operational");
+            Require(
+                _economy.Economy.Balance == balanceBeforeDefense + _stage.DefenseMissionReward,
+                "defense reward granted once");
+            Require(
+                !_stage.DefeatCounterattackerForDiagnostics(1),
+                "terminal defense cannot reward twice");
+
+            _workshop.ResetBusinessEncounter();
+            _stage.ResetStageFiveEncounter();
+            for (int interaction = 0; interaction < 4; interaction++)
+            {
+                _workshop.InteractWithMerchant();
+            }
+
+            _stage.AdvanceDefenseForDiagnostics(_stage.CounterattackWarningDuration);
+            Require(_stage.ForceDefenseFailureForDiagnostics(), "forced sabotage failure");
+            Require(
+                _stage.DefenseMissionStatus == BusinessDefenseMissionStatus.Failed,
+                "failed defense state");
+            Require(!_workshop.Operations.IsOperational, "failed defense sabotages operations");
+            Require(
+                _workshop.Business.OwnerId == WorkshopController.PlayerFactionId,
+                "failed defense preserves ownership");
+
+            _workshop.InteractWithOperations();
+            Require(_workshop.Operations.IsOperational, "player repairs El Faro");
+            Require(
+                _stage.DefenseMissionStatus == BusinessDefenseMissionStatus.Warning,
+                "repair schedules defense retry");
+
+            GD.Print(
+                $"Defense mission smoke passed: 12 s warning, two physical attackers, " +
+                $"${_stage.DefenseMissionReward} single reward, failure and repair retry verified.");
+            exitCode = 0;
+        }
+        catch (Exception exception)
+        {
+            GD.PushError($"Defense mission smoke failed: {exception}");
+        }
+        finally
+        {
+            GetTree().Quit(exitCode);
+        }
+    }
+
     private void AddCrowdProbe(Node parent, Vector3 start, Vector3 destination)
     {
         NavigationCrowdProbe probe = new()
@@ -744,6 +837,10 @@ public sealed partial class PlaytestDiagnosticsController : Node
             _stage?.GetNode<NavigationAgent3D>("Counterattacker/NavigationAgent3D")
                 .AvoidanceEnabled == false,
             "inactive counterattacker avoidance");
+        Require(
+            _stage?.GetNode<NavigationAgent3D>("Counterattacker2/NavigationAgent3D")
+                .AvoidanceEnabled == false,
+            "inactive second counterattacker avoidance");
     }
 
     private float GetMinimumCrowdDistance()

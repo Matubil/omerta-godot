@@ -173,6 +173,11 @@ public sealed partial class HudController : CanvasLayer
     {
         if (_missionLabel is not null)
         {
+            _missionLabel.AddThemeColorOverride(
+                "font_color",
+                status == "URGENTE"
+                    ? new Color(1.0f, 0.28f, 0.18f)
+                    : new Color(0.93f, 0.76f, 0.36f));
             _missionLabel.Text = $"ENCARGO · {status.ToUpperInvariant()}\n{objective}";
         }
     }

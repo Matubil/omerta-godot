@@ -20,9 +20,13 @@ namespace Omerta.GodotAdapters.StageFive;
 public sealed partial class StageFiveController : Node3D
 {
     public const string ElFaroMissionId = "mission.el-faro-takeover";
+    public const string DefenseMissionId = "mission.defense.el-faro";
 
     [Export]
     public int MissionReward { get; set; } = 150;
+
+    [Export]
+    public int DefenseMissionReward { get; set; } = 125;
 
     [Export]
     public int PoliceBribeCost { get; set; } = 60;
@@ -61,9 +65,13 @@ public sealed partial class StageFiveController : Node3D
     public Vector3 CounterattackerSpawn { get; set; } = new(-17.0f, 0.05f, 15.0f);
 
     [Export]
+    public Vector3 SecondCounterattackerSpawn { get; set; } = new(-15.0f, 0.05f, 17.0f);
+
+    [Export]
     public Vector3 CounterattackObjective { get; set; } = new(0.0f, 0.05f, -3.4f);
 
     private PropertyTakeoverMission? _mission;
+    private BusinessDefenseMission? _defenseMission;
     private PoliceResponseState? _police;
     private BusinessCounterattack? _counterattack;
     private WorkshopController? _workshop;
@@ -74,6 +82,7 @@ public sealed partial class StageFiveController : Node3D
     private WitnessController? _witness;
     private PoliceOfficerController? _policeOfficer;
     private CounterattackerController? _counterattacker;
+    private CounterattackerController? _secondCounterattacker;
     private Node3D? _policeVehicle;
     private NavigationAgent3D? _policeVehicleNavigation;
     private AllyReinforcementController? _reinforcements;
@@ -94,9 +103,20 @@ public sealed partial class StageFiveController : Node3D
     public PropertyTakeoverMissionStatus MissionStatus =>
         _mission?.Status ?? PropertyTakeoverMissionStatus.Available;
 
+    public BusinessDefenseMissionStatus DefenseMissionStatus =>
+        _defenseMission?.Status ?? BusinessDefenseMissionStatus.Waiting;
+
+    public bool HasActiveDefenseMission => _defenseMission?.IsActive == true;
+
+    public int LivingCounterattackerCount => _counterattack?.LivingAttackerCount ?? 0;
+
+    public int ActiveCounterattackerCount =>
+        (_counterattacker?.IsActive == true ? 1 : 0) +
+        (_secondCounterattacker?.IsActive == true ? 1 : 0);
+
     public bool HasRequiredRuntimeActors => _witness is not null && _policeOfficer is not null &&
-        _counterattacker is not null && _policeVehicle is not null && _reinforcements is not null &&
-        _squad is not null;
+        _counterattacker is not null && _secondCounterattacker is not null &&
+        _policeVehicle is not null && _reinforcements is not null && _squad is not null;
 
     public override void _Ready()
     {
@@ -118,6 +138,7 @@ public sealed partial class StageFiveController : Node3D
         _policeVehicleNavigation = _policeVehicle.GetNode<NavigationAgent3D>("NavigationAgent3D");
         _policeOfficer = GetNode<PoliceOfficerController>("PoliceOfficer");
         _counterattacker = GetNode<CounterattackerController>("Counterattacker");
+        _secondCounterattacker = GetNode<CounterattackerController>("Counterattacker2");
         _reinforcements = GetNode<AllyReinforcementController>("AllyReinforcement");
         _squad = GetNode<SquadCommander>("SquadCommander");
 
@@ -129,18 +150,23 @@ public sealed partial class StageFiveController : Node3D
             WorkshopController.PlayerFactionId,
             CounterattackWarningDuration,
             CounterattackSabotageDuration,
-            1);
+            2);
+        _defenseMission = new BusinessDefenseMission(_economy.Economy, DefenseMissionReward);
 
         _mission.Changed += OnMissionChanged;
         _police.Changed += OnPoliceChanged;
         _counterattack.Changed += OnCounterattackChanged;
         _counterattack.AttackersRequested += OnAttackersRequested;
+        _defenseMission.Changed += OnDefenseMissionChanged;
         _workshop.Business.OwnerChanged += OnWorkshopOwnerChanged;
         _playerWeapon.ShotResolved += OnPlayerShot;
         _playerCombatant.Defeated += OnPlayerDefeated;
         _policeOfficer.Defeated += OnPoliceOfficerDefeated;
         _counterattacker.ObjectivePresenceChanged += OnCounterattackerObjectivePresenceChanged;
         _counterattacker.Defeated += OnCounterattackerDefeated;
+        _secondCounterattacker.ObjectivePresenceChanged +=
+            OnSecondCounterattackerObjectivePresenceChanged;
+        _secondCounterattacker.Defeated += OnSecondCounterattackerDefeated;
 
         ResetTransientSystems();
         RefreshHud();
@@ -152,6 +178,11 @@ public sealed partial class StageFiveController : Node3D
         if (_mission is not null)
         {
             _mission.Changed -= OnMissionChanged;
+        }
+
+        if (_defenseMission is not null)
+        {
+            _defenseMission.Changed -= OnDefenseMissionChanged;
         }
 
         if (_police is not null)
@@ -190,6 +221,13 @@ public sealed partial class StageFiveController : Node3D
         {
             _counterattacker.ObjectivePresenceChanged -= OnCounterattackerObjectivePresenceChanged;
             _counterattacker.Defeated -= OnCounterattackerDefeated;
+        }
+
+        if (_secondCounterattacker is not null)
+        {
+            _secondCounterattacker.ObjectivePresenceChanged -=
+                OnSecondCounterattackerObjectivePresenceChanged;
+            _secondCounterattacker.Defeated -= OnSecondCounterattackerDefeated;
         }
     }
 
@@ -266,6 +304,24 @@ public sealed partial class StageFiveController : Node3D
         };
     }
 
+    public MissionProgressSaveData CreateDefenseMissionSaveData()
+    {
+        if (_defenseMission is null)
+        {
+            throw new InvalidOperationException("The defense mission has not been initialized.");
+        }
+
+        BusinessDefenseMissionStatus persistentStatus = _defenseMission.IsActive
+            ? BusinessDefenseMissionStatus.Waiting
+            : _defenseMission.Status;
+        return new MissionProgressSaveData
+        {
+            MissionId = DefenseMissionId,
+            Status = persistentStatus.ToString(),
+            RewardGranted = _defenseMission.RewardGranted
+        };
+    }
+
     public MissionProgressSaveData? ValidateMissionProgress(IReadOnlyList<MissionProgressSaveData> missions)
     {
         MissionProgressSaveData? match = null;
@@ -296,7 +352,55 @@ public sealed partial class StageFiveController : Node3D
         return match;
     }
 
-    public void RestoreAfterLoad(MissionProgressSaveData? savedMission)
+    public MissionProgressSaveData? ValidateDefenseMissionProgress(
+        IReadOnlyList<MissionProgressSaveData> missions,
+        bool targetOperational)
+    {
+        MissionProgressSaveData? match = null;
+        foreach (MissionProgressSaveData savedMission in missions)
+        {
+            if (savedMission.MissionId != DefenseMissionId)
+            {
+                continue;
+            }
+
+            if (match is not null)
+            {
+                throw new InvalidDataException($"Mission '{DefenseMissionId}' is duplicated in the save.");
+            }
+
+            match = savedMission;
+        }
+
+        if (match is null)
+        {
+            return null;
+        }
+
+        BusinessDefenseMissionStatus status = ParseDefenseMissionStatus(match.Status);
+        if (status is BusinessDefenseMissionStatus.Warning or
+            BusinessDefenseMissionStatus.Defending)
+        {
+            throw new InvalidDataException("An active defense is transient and cannot be restored.");
+        }
+
+        if ((status == BusinessDefenseMissionStatus.Succeeded && !match.RewardGranted) ||
+            (status == BusinessDefenseMissionStatus.Failed && match.RewardGranted))
+        {
+            throw new InvalidDataException("Defense completion and reward state are inconsistent.");
+        }
+
+        if (status == BusinessDefenseMissionStatus.Failed && targetOperational)
+        {
+            throw new InvalidDataException("A failed defense requires a sabotaged target.");
+        }
+
+        return match;
+    }
+
+    public void RestoreAfterLoad(
+        MissionProgressSaveData? savedMission,
+        MissionProgressSaveData? savedDefenseMission)
     {
         if (_mission is null || _workshop is null)
         {
@@ -319,7 +423,27 @@ public sealed partial class StageFiveController : Node3D
             }
         }
 
+        if (_defenseMission is not null)
+        {
+            if (savedDefenseMission is null)
+            {
+                _defenseMission.RestoreProgress(BusinessDefenseMissionStatus.Waiting, false);
+            }
+            else
+            {
+                _defenseMission.RestoreProgress(
+                    ParseDefenseMissionStatus(savedDefenseMission.Status),
+                    savedDefenseMission.RewardGranted);
+            }
+        }
+
         RefreshHud();
+    }
+
+    public void PrepareForLoad()
+    {
+        ResetTransientSystems();
+        _defenseMission?.ResetForLoad();
     }
 
     public void ResetStageFiveEncounter()
@@ -327,6 +451,7 @@ public sealed partial class StageFiveController : Node3D
         ResetTransientSystems();
         _witness?.ResetWitness();
         _mission?.RestoreProgress(PropertyTakeoverMissionStatus.Available, false);
+        _defenseMission?.ResetForLoad();
         RefreshHud();
     }
 
@@ -337,6 +462,13 @@ public sealed partial class StageFiveController : Node3D
         if (_mission is null)
         {
             return false;
+        }
+
+        if (_defenseMission?.IsActive == true)
+        {
+            position = CounterattackObjective;
+            label = "DEFENDÉ EL FARO";
+            return true;
         }
 
         switch (_mission.Status)
@@ -361,6 +493,23 @@ public sealed partial class StageFiveController : Node3D
                 return false;
         }
     }
+
+    public void AdvanceDefenseForDiagnostics(float seconds) =>
+        _counterattack?.Advance(seconds);
+
+    public bool DefeatCounterattackerForDiagnostics(int index)
+    {
+        bool defeated = _counterattack?.SetAttackerDefeated(index) == true;
+        if (defeated)
+        {
+            GetCounterattacker(index)?.Deactivate();
+        }
+
+        return defeated;
+    }
+
+    public bool ForceDefenseFailureForDiagnostics() =>
+        _counterattack?.ForceSabotage() == true;
 
     private void AdvancePolice(float deltaSeconds)
     {
@@ -435,7 +584,11 @@ public sealed partial class StageFiveController : Node3D
         }
     }
 
-    private void OnPlayerDefeated(DamageInfo damage) => _mission?.Fail();
+    private void OnPlayerDefeated(DamageInfo damage)
+    {
+        _mission?.Fail();
+        _counterattack?.ForceSabotage();
+    }
 
     private void OnPoliceOfficerDefeated()
     {
@@ -477,8 +630,13 @@ public sealed partial class StageFiveController : Node3D
 
     private void OnAttackersRequested()
     {
-        _counterattacker?.Activate(CounterattackerSpawn, CounterattackObjective);
-        _hud?.ShowStatus("Represalia: un hombre del Círculo Ferro va hacia El Faro.", 5.0f);
+        _counterattacker?.Activate(
+            CounterattackerSpawn,
+            CounterattackObjective + Vector3.Left * 0.7f);
+        _secondCounterattacker?.Activate(
+            SecondCounterattackerSpawn,
+            CounterattackObjective + Vector3.Right * 0.7f);
+        _hud?.ShowStatus("Represalia: dos hombres del Círculo Ferro van hacia El Faro.", 5.0f);
     }
 
     private void OnCounterattackerObjectivePresenceChanged(bool atObjective) =>
@@ -486,18 +644,54 @@ public sealed partial class StageFiveController : Node3D
 
     private void OnCounterattackerDefeated()
     {
-        if (_counterattack?.SetAttackerDefeated(0) == true)
-        {
-            _hud?.ShowStatus("Represalia rechazada. El Faro sigue operativo.", 5.0f);
-        }
+        _counterattack?.SetAttackerDefeated(0);
     }
+
+    private void OnSecondCounterattackerObjectivePresenceChanged(bool atObjective) =>
+        _counterattack?.SetAttackerAtObjective(1, atObjective);
+
+    private void OnSecondCounterattackerDefeated() =>
+        _counterattack?.SetAttackerDefeated(1);
 
     private void OnCounterattackChanged()
     {
+        if (_counterattack is not null)
+        {
+            _defenseMission?.Synchronize(_counterattack.Status);
+        }
+
         if (_counterattack?.Status == BusinessCounterattackStatus.Sabotaged)
         {
             _hud?.ShowStatus("El atacante saboteó El Faro, pero la propiedad sigue siendo tuya.", 6.0f);
             _counterattacker?.Deactivate();
+            _secondCounterattacker?.Deactivate();
+        }
+        else if (_counterattack?.Status == BusinessCounterattackStatus.Defended)
+        {
+            _counterattacker?.Deactivate();
+            _secondCounterattacker?.Deactivate();
+        }
+
+        RefreshHud();
+    }
+
+    private void OnDefenseMissionChanged()
+    {
+        if (_defenseMission?.Status == BusinessDefenseMissionStatus.Warning)
+        {
+            _hud?.ShowStatus("MISIÓN URGENTE: defendé Taller El Faro.", 6.0f);
+        }
+        else if (_defenseMission?.Status == BusinessDefenseMissionStatus.Succeeded)
+        {
+            _hud?.ShowStatus(
+                $"Defensa completada. Recompensa: ${DefenseMissionReward}.",
+                6.0f);
+        }
+        else if (_defenseMission?.Status == BusinessDefenseMissionStatus.Failed)
+        {
+            _hud?.ShowStatus(
+                "Defensa fallida. Repará El Faro para volver a intentarlo.",
+                6.0f);
         }
 
         RefreshHud();
@@ -509,6 +703,7 @@ public sealed partial class StageFiveController : Node3D
         _counterattack?.AcknowledgeCurrentOwnership();
         _policeOfficer?.Deactivate();
         _counterattacker?.Deactivate();
+        _secondCounterattacker?.Deactivate();
         if (_policeVehicle is not null)
         {
             _policeVehicle.GlobalPosition = PoliceVehicleSpawn;
@@ -528,7 +723,16 @@ public sealed partial class StageFiveController : Node3D
     private void RefreshHud()
     {
         ResolveHud();
-        if (_mission is not null)
+        if (_defenseMission?.IsActive == true && _counterattack is not null)
+        {
+            string objective = _defenseMission.Status == BusinessDefenseMissionStatus.Warning
+                ? $"Defendé Taller El Faro · llegan en {_counterattack.RemainingWarningSeconds:0.0} s"
+                : _counterattack.IsSabotageInProgress
+                    ? $"Interrumpí el sabotaje · El Faro cae en {_counterattack.RemainingSabotageSeconds:0.0} s"
+                    : $"Eliminá a los atacantes · quedan {_counterattack.LivingAttackerCount}";
+            _hud?.SetMission(objective, "URGENTE");
+        }
+        else if (_mission is not null)
         {
             string objective = _mission.Status switch
             {
@@ -572,4 +776,22 @@ public sealed partial class StageFiveController : Node3D
 
         return status;
     }
+
+    private static BusinessDefenseMissionStatus ParseDefenseMissionStatus(string value)
+    {
+        if (!Enum.TryParse(value, false, out BusinessDefenseMissionStatus status) ||
+            !Enum.IsDefined(status))
+        {
+            throw new InvalidDataException($"Unknown defense mission status '{value}'.");
+        }
+
+        return status;
+    }
+
+    private CounterattackerController? GetCounterattacker(int index) => index switch
+    {
+        0 => _counterattacker,
+        1 => _secondCounterattacker,
+        _ => null
+    };
 }

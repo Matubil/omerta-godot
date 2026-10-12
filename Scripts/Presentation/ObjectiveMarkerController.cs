@@ -53,6 +53,11 @@ public sealed partial class ObjectiveMarkerController : Control
         screenPosition.X = Mathf.Clamp(screenPosition.X, ScreenMargin, viewportSize.X - ScreenMargin);
         screenPosition.Y = Mathf.Clamp(screenPosition.Y, 108.0f, viewportSize.Y - ScreenMargin);
         float distance = _player.GlobalPosition.DistanceTo(target);
+        _label.AddThemeColorOverride(
+            "font_color",
+            _stage.HasActiveDefenseMission
+                ? new Color(1.0f, 0.28f, 0.18f)
+                : new Color(1.0f, 0.82f, 0.36f));
         _label.Text = $"◆ {objective} · {distance:0} m";
         Position = screenPosition - new Vector2(Size.X * 0.5f, Size.Y * 0.5f);
         Visible = !_camera.IsPositionBehind(target);
