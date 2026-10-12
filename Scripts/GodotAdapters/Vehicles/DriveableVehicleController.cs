@@ -1,3 +1,4 @@
+using System;
 using Godot;
 using Omerta.Domain.Economy;
 using Omerta.Domain.Vehicles;
@@ -10,6 +11,8 @@ namespace Omerta.GodotAdapters.Vehicles;
 
 public sealed partial class DriveableVehicleController : CharacterBody3D
 {
+    public event Action<DriveableVehicleController>? UnauthorizedUseStarted;
+
     [Export]
     public string VehicleId { get; set; } = "vehicle.stolen.prototype";
 
@@ -60,6 +63,7 @@ public sealed partial class DriveableVehicleController : CharacterBody3D
     public bool CanEnterVehicle => Visible && _driveEnabled && Driver is null;
     public bool CanUseArsenal => Visible && _driveEnabled && Driver is null &&
         IsFamilyOwned && Mathf.Abs(_speed) < 0.2f;
+    public bool IsPoliceMarked { get; private set; }
     public float CurrentSpeed => _speed;
 
     public override void _Ready()
@@ -127,6 +131,11 @@ public sealed partial class DriveableVehicleController : CharacterBody3D
                 ? $"Entraste a {DisplayName}."
                 : $"Vehículo robado: llevalo al garaje de El Faro para registrarlo.",
             4.0f);
+        if (!IsFamilyOwned && !IsPoliceMarked)
+        {
+            UnauthorizedUseStarted?.Invoke(this);
+        }
+
         return true;
     }
 
@@ -162,11 +171,42 @@ public sealed partial class DriveableVehicleController : CharacterBody3D
     public VehicleRegistrationResult TryRegisterAtGarage(
         bool garageAvailable,
         EconomyService economy,
-        int cost) => Ownership.TryRegister(garageAvailable, economy, cost);
+        int cost)
+    {
+        if (IsPoliceMarked)
+        {
+            return VehicleRegistrationResult.PoliceSearchActive;
+        }
+
+        return Ownership.TryRegister(garageAvailable, economy, cost);
+    }
+
+    public void MarkAsReportedStolen()
+    {
+        if (IsFamilyOwned || IsPoliceMarked)
+        {
+            return;
+        }
+
+        IsPoliceMarked = true;
+        RefreshOwnershipPresentation();
+    }
+
+    public void ClearPoliceMark()
+    {
+        if (!IsPoliceMarked)
+        {
+            return;
+        }
+
+        IsPoliceMarked = false;
+        RefreshOwnershipPresentation();
+    }
 
     public void RestorePersistentState(Vector3 position, Quaternion rotation, bool familyOwned)
     {
         ForceExitDriver(false);
+        ClearPoliceMark();
         Ownership.Restore(familyOwned);
         GlobalTransform = new Transform3D(new Basis(rotation.Normalized()), position);
         _speed = 0.0f;
@@ -176,6 +216,7 @@ public sealed partial class DriveableVehicleController : CharacterBody3D
     public void ResetPersistentState()
     {
         ForceExitDriver(false);
+        ClearPoliceMark();
         Ownership.Reset();
         GlobalPosition = _initialPosition;
         Rotation = _initialRotation;
@@ -225,7 +266,9 @@ public sealed partial class DriveableVehicleController : CharacterBody3D
         {
             _ownershipLabel.Text = IsFamilyOwned
                 ? $"{DisplayName.ToUpperInvariant()} · FAMILIA"
-                : $"{DisplayName.ToUpperInvariant()} · ROBADO";
+                : IsPoliceMarked
+                    ? $"{DisplayName.ToUpperInvariant()} · BUSCADO"
+                    : $"{DisplayName.ToUpperInvariant()} · ROBADO";
             _ownershipLabel.Modulate = IsFamilyOwned
                 ? new Color(0.48f, 0.95f, 0.62f)
                 : new Color(1.0f, 0.66f, 0.28f);

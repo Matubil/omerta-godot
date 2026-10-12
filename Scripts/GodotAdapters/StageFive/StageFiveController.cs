@@ -13,6 +13,7 @@ using Omerta.GodotAdapters.Economy;
 using Omerta.GodotAdapters.Law;
 using Omerta.GodotAdapters.Navigation;
 using Omerta.GodotAdapters.Squad;
+using Omerta.GodotAdapters.Vehicles;
 using Omerta.Presentation;
 
 namespace Omerta.GodotAdapters.StageFive;
@@ -38,6 +39,9 @@ public sealed partial class StageFiveController : Node3D
     public float WitnessHearingRadius { get; set; } = 18.0f;
 
     [Export]
+    public float VehicleTheftWitnessRadius { get; set; } = 22.0f;
+
+    [Export]
     public float PoliceDispatchDelay { get; set; } = 3.0f;
 
     [Export]
@@ -45,6 +49,12 @@ public sealed partial class StageFiveController : Node3D
 
     [Export]
     public float PoliceVehicleSpeed { get; set; } = 8.0f;
+
+    [Export]
+    public float PoliceVehicleDetectionRadius { get; set; } = 18.0f;
+
+    [Export]
+    public float PoliceVehicleStopRadius { get; set; } = 3.5f;
 
     [Export]
     public float CounterattackWarningDuration { get; set; } = 12.0f;
@@ -89,6 +99,8 @@ public sealed partial class StageFiveController : Node3D
     private SquadCommander? _squad;
     private HudController? _hud;
     private Vector3 _lastKnownPlayerPosition;
+    private readonly List<DriveableVehicleController> _subscribedVehicles = new();
+    private DriveableVehicleController? _pursuitVehicle;
 
     public bool CanStartMission => _mission?.CanStart == true;
 
@@ -97,6 +109,14 @@ public sealed partial class StageFiveController : Node3D
         : "Aceptar encargo: conquistar Taller El Faro";
 
     public bool CanAttemptPoliceBribe => _police?.Status == PoliceResponseStatus.Responding;
+
+    public PoliceResponseStatus PoliceStatus =>
+        _police?.Status ?? PoliceResponseStatus.Available;
+
+    public PoliceIncidentType PoliceIncident =>
+        _police?.IncidentType ?? PoliceIncidentType.None;
+
+    public string PursuitVehicleId => _pursuitVehicle?.VehicleId ?? string.Empty;
 
     public string PoliceBribePrompt => $"Sobornar al agente (${PoliceBribeCost})";
 
@@ -167,6 +187,7 @@ public sealed partial class StageFiveController : Node3D
         _secondCounterattacker.ObjectivePresenceChanged +=
             OnSecondCounterattackerObjectivePresenceChanged;
         _secondCounterattacker.Defeated += OnSecondCounterattackerDefeated;
+        SubscribeToDriveableVehicles();
 
         ResetTransientSystems();
         RefreshHud();
@@ -229,6 +250,8 @@ public sealed partial class StageFiveController : Node3D
                 OnSecondCounterattackerObjectivePresenceChanged;
             _secondCounterattacker.Defeated -= OnSecondCounterattackerDefeated;
         }
+
+        UnsubscribeFromDriveableVehicles();
     }
 
     public override void _Process(double delta)
@@ -511,6 +534,31 @@ public sealed partial class StageFiveController : Node3D
     public bool ForceDefenseFailureForDiagnostics() =>
         _counterattack?.ForceSabotage() == true;
 
+    public bool EscapeVehiclePursuitForDiagnostics()
+    {
+        if (_police is null || _police.IncidentType != PoliceIncidentType.VehicleTheft)
+        {
+            return false;
+        }
+
+        if (_police.Status == PoliceResponseStatus.Dispatching)
+        {
+            _police.AdvanceDispatch(PoliceDispatchDelay);
+        }
+
+        if (_police.Status == PoliceResponseStatus.EnRoute)
+        {
+            _police.BeginVehiclePursuit();
+        }
+
+        if (_police.Status == PoliceResponseStatus.PursuingVehicle)
+        {
+            _police.AdvanceSearch(PoliceEscapeDuration, false);
+        }
+
+        return _police.Status == PoliceResponseStatus.Escaped;
+    }
+
     private void AdvancePolice(float deltaSeconds)
     {
         if (_police is null || _policeVehicle is null)
@@ -520,24 +568,22 @@ public sealed partial class StageFiveController : Node3D
 
         if (_police.Status == PoliceResponseStatus.Dispatching)
         {
-            _police.AdvanceDispatch(deltaSeconds);
+            if (_police.AdvanceDispatch(deltaSeconds) &&
+                _police.IncidentType == PoliceIncidentType.VehicleTheft)
+            {
+                _police.BeginVehiclePursuit();
+            }
         }
         else if (_police.Status == PoliceResponseStatus.EnRoute)
         {
-            _policeVehicle.Visible = true;
-            Vector3 direction = _policeVehicleNavigation is not null
-                ? NavigationMotion.DirectionTo(
-                    _policeVehicle,
-                    _policeVehicleNavigation,
-                    PoliceVehicleDestination)
-                : PoliceVehicleDestination - _policeVehicle.GlobalPosition;
-            direction.Y = 0.0f;
-            if (direction.LengthSquared() > 0.001f)
+            if (_police.IncidentType == PoliceIncidentType.VehicleTheft &&
+                _police.BeginVehiclePursuit())
             {
-                float distance = Mathf.Min(PoliceVehicleSpeed * deltaSeconds, direction.Length());
-                _policeVehicle.GlobalPosition += direction.Normalized() * distance;
-                _policeVehicle.LookAt(_policeVehicle.GlobalPosition + direction, Vector3.Up);
+                return;
             }
+
+            _policeVehicle.Visible = true;
+            MovePoliceVehicleToward(PoliceVehicleDestination, deltaSeconds);
 
             Vector3 direct = PoliceVehicleDestination - _policeVehicle.GlobalPosition;
             direct.Y = 0.0f;
@@ -549,6 +595,10 @@ public sealed partial class StageFiveController : Node3D
                     _lastKnownPlayerPosition);
             }
         }
+        else if (_police.Status == PoliceResponseStatus.PursuingVehicle)
+        {
+            AdvanceVehiclePursuit(deltaSeconds);
+        }
         else if (_police.Status == PoliceResponseStatus.Responding)
         {
             if (_policeOfficer?.HasPlayerLineOfSight == true && _player is not null)
@@ -559,6 +609,71 @@ public sealed partial class StageFiveController : Node3D
 
             _police.AdvanceSearch(deltaSeconds, _policeOfficer?.HasPlayerLineOfSight == true);
         }
+    }
+
+    private void AdvanceVehiclePursuit(float deltaSeconds)
+    {
+        if (_police is null || _policeVehicle is null)
+        {
+            return;
+        }
+
+        bool hasVehicle = _pursuitVehicle is not null &&
+            GodotObject.IsInstanceValid(_pursuitVehicle);
+        Vector3 target = hasVehicle
+            ? _pursuitVehicle!.GlobalPosition
+            : _lastKnownPlayerPosition;
+        _policeVehicle.Visible = true;
+        MovePoliceVehicleToward(target, deltaSeconds);
+
+        Vector3 separation = target - _policeVehicle.GlobalPosition;
+        separation.Y = 0.0f;
+        bool hasVisualContact = hasVehicle &&
+            separation.LengthSquared() <=
+            PoliceVehicleDetectionRadius * PoliceVehicleDetectionRadius;
+        if (hasVehicle && _pursuitVehicle!.IsDriven)
+        {
+            _lastKnownPlayerPosition = target;
+        }
+
+        if (_police.AdvanceSearch(deltaSeconds, hasVisualContact))
+        {
+            return;
+        }
+
+        if (hasVehicle && !_pursuitVehicle!.IsDriven &&
+            separation.LengthSquared() <= PoliceVehicleStopRadius * PoliceVehicleStopRadius &&
+            _police.ContinueSearchOnFoot())
+        {
+            _lastKnownPlayerPosition = _player?.GlobalPosition ?? target;
+            _policeOfficer?.Activate(
+                _policeVehicle.GlobalPosition + Vector3.Left * 1.4f,
+                _lastKnownPlayerPosition);
+        }
+    }
+
+    private void MovePoliceVehicleToward(Vector3 destination, float deltaSeconds)
+    {
+        if (_policeVehicle is null)
+        {
+            return;
+        }
+
+        Vector3 direction = _policeVehicleNavigation is not null
+            ? NavigationMotion.DirectionTo(
+                _policeVehicle,
+                _policeVehicleNavigation,
+                destination)
+            : destination - _policeVehicle.GlobalPosition;
+        direction.Y = 0.0f;
+        if (direction.LengthSquared() <= 0.001f)
+        {
+            return;
+        }
+
+        float distance = Mathf.Min(PoliceVehicleSpeed * deltaSeconds, direction.Length());
+        _policeVehicle.GlobalPosition += direction.Normalized() * distance;
+        _policeVehicle.LookAt(_policeVehicle.GlobalPosition + direction, Vector3.Up);
     }
 
     private void OnPlayerShot(Vector3 origin, Vector3 end, bool didHit)
@@ -574,6 +689,60 @@ public sealed partial class StageFiveController : Node3D
         _police.ReportGunfire(1);
         _policeOfficer?.UpdateLastKnownPosition(_lastKnownPlayerPosition);
         _hud?.ShowStatus("Un testigo oyó el disparo y llamó a la policía.", 5.0f);
+    }
+
+    private void OnUnauthorizedVehicleUse(DriveableVehicleController vehicle)
+    {
+        if (_police is null || _witness?.CanReport != true ||
+            vehicle.GlobalPosition.DistanceSquaredTo(_witness.GlobalPosition) >
+            VehicleTheftWitnessRadius * VehicleTheftWitnessRadius)
+        {
+            _hud?.ShowStatus("Robaste el vehículo sin que nadie cercano lo denunciara.", 4.0f);
+            return;
+        }
+
+        _pursuitVehicle?.ClearPoliceMark();
+        _pursuitVehicle = vehicle;
+        _pursuitVehicle.MarkAsReportedStolen();
+        _lastKnownPlayerPosition = vehicle.GlobalPosition;
+        _police.ReportVehicleTheft(1);
+        if (_police.Status == PoliceResponseStatus.Responding &&
+            _police.BeginVehiclePursuit())
+        {
+            _policeOfficer?.Deactivate();
+        }
+
+        _hud?.ShowStatus(
+            "Un testigo denunció el robo. El patrullero está siguiendo el vehículo marcado.",
+            6.0f);
+    }
+
+    private void SubscribeToDriveableVehicles()
+    {
+        UnsubscribeFromDriveableVehicles();
+        foreach (Node node in GetTree().GetNodesInGroup("driveable_vehicle"))
+        {
+            if (node is not DriveableVehicleController vehicle)
+            {
+                continue;
+            }
+
+            vehicle.UnauthorizedUseStarted += OnUnauthorizedVehicleUse;
+            _subscribedVehicles.Add(vehicle);
+        }
+    }
+
+    private void UnsubscribeFromDriveableVehicles()
+    {
+        foreach (DriveableVehicleController vehicle in _subscribedVehicles)
+        {
+            if (GodotObject.IsInstanceValid(vehicle))
+            {
+                vehicle.UnauthorizedUseStarted -= OnUnauthorizedVehicleUse;
+            }
+        }
+
+        _subscribedVehicles.Clear();
     }
 
     private void OnWorkshopOwnerChanged(string previous, string current)
@@ -603,6 +772,8 @@ public sealed partial class StageFiveController : Node3D
         if (_police?.Status is PoliceResponseStatus.Resolved or
             PoliceResponseStatus.Escaped or PoliceResponseStatus.Bribed)
         {
+            _pursuitVehicle?.ClearPoliceMark();
+            _pursuitVehicle = null;
             _mission?.MarkPoliceResponseResolved();
             _policeOfficer?.Deactivate();
             if (_policeVehicle is not null)
@@ -699,6 +870,8 @@ public sealed partial class StageFiveController : Node3D
 
     private void ResetTransientSystems()
     {
+        _pursuitVehicle?.ClearPoliceMark();
+        _pursuitVehicle = null;
         _police?.Reset();
         _counterattack?.AcknowledgeCurrentOwnership();
         _policeOfficer?.Deactivate();
@@ -752,7 +925,8 @@ public sealed partial class StageFiveController : Node3D
             _hud?.SetPolice(
                 _police.Status.ToString(),
                 _police.WantedLevel,
-                _police.Status == PoliceResponseStatus.Responding
+                _police.Status is PoliceResponseStatus.Responding or
+                    PoliceResponseStatus.PursuingVehicle
                     ? _police.RemainingEscapeSeconds
                     : _police.RemainingDispatchSeconds);
         }

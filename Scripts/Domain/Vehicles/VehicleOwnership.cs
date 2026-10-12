@@ -8,7 +8,8 @@ public enum VehicleRegistrationResult
     Registered,
     AlreadyFamilyOwned,
     GarageUnavailable,
-    InsufficientFunds
+    InsufficientFunds,
+    PoliceSearchActive
 }
 
 public sealed class VehicleOwnership

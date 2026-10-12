@@ -87,6 +87,9 @@ pero su baúl no accede al arsenal. Después de conquistar y reparar El Faro se 
 estacionar dentro de su garaje y pagar $75 para registrarlo: cambia a vehículo familiar,
 habilita el baúl compartido y conserva posición y propiedad al guardar/cargar. El auto de
 refuerzos utiliza la misma conducción una vez que termina su llegada y baja la crew.
+Si el testigo presencia el robo, el sedán queda marcado y el patrullero persigue su
+posición dinámica. Abandonarlo no cancela la búsqueda: la policía llega hasta el coche y
+continúa a pie. El garaje rechaza autos buscados hasta que se pierda o resuelva la alerta.
 
 La partida manual se guarda como JSON versionado bajo `user://save_0.json`. Conserva
 pose, salud, munición, economía, propiedad y operatividad de los tres negocios, y
@@ -135,3 +138,6 @@ El loadout limitado y el arsenal del vehículo familiar están detallados en
 
 La conducción, propiedad de autos y el garaje de El Faro están detallados en
 [`Documentation/Stage15DriveableVehiclesAndGarage.md`](Documentation/Stage15DriveableVehiclesAndGarage.md).
+
+El delito vehicular y la persecución dinámica están detallados en
+[`Documentation/Stage16VehicleCrimeAndPolicePursuit.md`](Documentation/Stage16VehicleCrimeAndPolicePursuit.md).

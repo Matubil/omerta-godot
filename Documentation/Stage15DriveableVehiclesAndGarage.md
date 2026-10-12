@@ -69,3 +69,6 @@ Agregar **delito vehicular y persecución policial**: que robar un auto pueda se
 denunciado, que el nivel de búsqueda siga al vehículo y que el patrullero existente pueda
 perseguirlo por las rutas de tránsito. Esto evita que robar autos sea una acción gratuita
 y conecta conducción, testigos, policía, sobornos y garaje en un mismo ciclo.
+
+Este incremento fue implementado y está documentado en
+`Stage16VehicleCrimeAndPolicePursuit.md`.

@@ -280,6 +280,7 @@ public sealed partial class PlaytestDiagnosticsController : Node
             Require(_player is not null, "player");
             Require(_stolenVehicle is not null, "persistent stolen street car");
             Require(_vehicleGarage is not null, "El Faro registration garage");
+            Require(_stage is not null, "police response controller");
             Require(_workshop is not null, "El Faro workshop");
             Require(_economy is not null, "economy");
             Require(!_stolenVehicle!.IsFamilyOwned, "street car begins stolen");
@@ -290,8 +291,14 @@ public sealed partial class PlaytestDiagnosticsController : Node
             _stolenVehicle.GlobalPosition = _vehicleGarage!.GlobalPosition + Vector3.Forward * 2.0f;
             Require(_stolenVehicle.TryEnterDriver(_player!), "player enters stolen vehicle");
             Require(_player!.IsDriving && _stolenVehicle.IsDriven, "driver state synchronized");
+            Require(_stolenVehicle.IsPoliceMarked, "nearby witness reports vehicle theft");
             _stolenVehicle.ForceExitDriver();
             Require(!_player.IsDriving && !_stolenVehicle.IsDriven, "player exits vehicle");
+            Require(_vehicleGarage.FindRegistrationCandidate() is null,
+                "garage rejects a police-marked vehicle");
+            Require(_stage!.EscapeVehiclePursuitForDiagnostics(),
+                "vehicle pursuit ends after losing police contact");
+            Require(!_stolenVehicle.IsPoliceMarked, "escape clears police vehicle mark");
 
             _workshop!.RestorePersistentState(
                 WorkshopController.PlayerFactionId,
@@ -310,8 +317,8 @@ public sealed partial class PlaytestDiagnosticsController : Node
             Require(trunk.CanInteract, "registered car unlocks shared family arsenal");
 
             GD.Print(
-                "Vehicle ownership smoke passed: enter/exit, stolen restrictions, El Faro " +
-                "registration payment and family arsenal unlock verified.");
+                "Vehicle ownership smoke passed: theft report, pursuit escape, enter/exit, " +
+                "El Faro registration payment and family arsenal unlock verified.");
             exitCode = 0;
         }
         catch (Exception exception)

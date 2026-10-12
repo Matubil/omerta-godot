@@ -62,6 +62,39 @@ public sealed class StageFiveRulesTests
     }
 
     [Test]
+    public void ReportedVehicleTheftStartsPursuitAndCanContinueOnFoot()
+    {
+        PoliceResponseState response = new(3.0f, 8.0f);
+
+        response.ReportVehicleTheft(1);
+        Assert.That(response.IncidentType, Is.EqualTo(PoliceIncidentType.VehicleTheft));
+        Assert.That(response.AdvanceDispatch(3.0f), Is.True);
+        Assert.That(response.BeginVehiclePursuit(), Is.True);
+        Assert.That(response.Status, Is.EqualTo(PoliceResponseStatus.PursuingVehicle));
+
+        response.AdvanceSearch(4.0f, false);
+        Assert.That(response.RemainingEscapeSeconds, Is.EqualTo(4.0f));
+        response.AdvanceSearch(1.0f, true);
+        Assert.That(response.RemainingEscapeSeconds, Is.EqualTo(8.0f));
+        Assert.That(response.ContinueSearchOnFoot(), Is.True);
+        Assert.That(response.Status, Is.EqualTo(PoliceResponseStatus.Responding));
+    }
+
+    [Test]
+    public void VehiclePursuitEndsAfterEscapingDetection()
+    {
+        PoliceResponseState response = new(3.0f, 8.0f);
+
+        response.ReportVehicleTheft(1);
+        response.AdvanceDispatch(3.0f);
+        response.BeginVehiclePursuit();
+
+        Assert.That(response.AdvanceSearch(8.0f, false), Is.True);
+        Assert.That(response.Status, Is.EqualTo(PoliceResponseStatus.Escaped));
+        Assert.That(response.WantedLevel, Is.Zero);
+    }
+
+    [Test]
     public void BribeRequiresOneLowLevelWitnessAndEnoughMoney()
     {
         Assert.That(

@@ -321,5 +321,9 @@ No deben entrar inicialmente conducción, tres negocios, policía completa, Igle
 
 ## Próximo paso concreto
 
-Después de descargar Godot .NET, abrirlo una vez y confirmar que inicia. A continuación se creará el repositorio `omerta-godot`, la solución C#, la escena bootstrap y una prueba mínima de movimiento/cámara. No se copiará todavía todo el código ni se modificará este proyecto Unity.
+Las etapas base y los incrementos jugables posteriores ya están implementados en
+`omerta-godot`. El siguiente paso concreto es agregar daño e intercepción de vehículos:
+salud de motor/carrocería, consecuencias de choque, detención forzada por el patrullero y
+resolución por arresto, multa o escape a pie. Debe completarse este ciclo antes de sumar
+tráfico civil, más modelos de autos o una policía de mayor escala.
 

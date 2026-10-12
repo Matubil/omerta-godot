@@ -7,10 +7,18 @@ public enum PoliceResponseStatus
     Available,
     Dispatching,
     EnRoute,
+    PursuingVehicle,
     Responding,
     Resolved,
     Escaped,
     Bribed
+}
+
+public enum PoliceIncidentType
+{
+    None,
+    Gunfire,
+    VehicleTheft
 }
 
 public sealed class PoliceResponseState
@@ -42,6 +50,8 @@ public sealed class PoliceResponseState
 
     public int WitnessCount { get; private set; }
 
+    public PoliceIncidentType IncidentType { get; private set; }
+
     public bool HasDefeatedOfficer { get; private set; }
 
     public float RemainingDispatchSeconds { get; private set; }
@@ -49,18 +59,26 @@ public sealed class PoliceResponseState
     public float RemainingEscapeSeconds { get; private set; }
 
     public bool IsActive => Status is PoliceResponseStatus.Dispatching or
-        PoliceResponseStatus.EnRoute or PoliceResponseStatus.Responding;
+        PoliceResponseStatus.EnRoute or PoliceResponseStatus.PursuingVehicle or
+        PoliceResponseStatus.Responding;
 
-    public void ReportGunfire(int witnessCount)
+    public void ReportGunfire(int witnessCount) =>
+        ReportIncident(PoliceIncidentType.Gunfire, witnessCount);
+
+    public void ReportVehicleTheft(int witnessCount) =>
+        ReportIncident(PoliceIncidentType.VehicleTheft, witnessCount);
+
+    private void ReportIncident(PoliceIncidentType incidentType, int witnessCount)
     {
         if (witnessCount <= 0)
         {
             return;
         }
 
-        WitnessCount = witnessCount;
+        WitnessCount = Math.Max(WitnessCount, witnessCount);
         if (!IsActive)
         {
+            IncidentType = incidentType;
             WantedLevel = 1;
             RemainingDispatchSeconds = _dispatchDelaySeconds;
             RemainingEscapeSeconds = _escapeDurationSeconds;
@@ -69,8 +87,14 @@ public sealed class PoliceResponseState
         }
         else
         {
+            if (incidentType == PoliceIncidentType.VehicleTheft)
+            {
+                IncidentType = incidentType;
+            }
+
             WantedLevel = Math.Min(3, WantedLevel + 1);
-            if (Status == PoliceResponseStatus.Responding)
+            if (Status is PoliceResponseStatus.Responding or
+                PoliceResponseStatus.PursuingVehicle)
             {
                 RemainingEscapeSeconds = _escapeDurationSeconds;
             }
@@ -99,6 +123,33 @@ public sealed class PoliceResponseState
         return true;
     }
 
+    public bool BeginVehiclePursuit()
+    {
+        if (Status is not (PoliceResponseStatus.EnRoute or PoliceResponseStatus.Responding) ||
+            IncidentType != PoliceIncidentType.VehicleTheft)
+        {
+            return false;
+        }
+
+        Status = PoliceResponseStatus.PursuingVehicle;
+        RemainingEscapeSeconds = _escapeDurationSeconds;
+        Changed?.Invoke();
+        return true;
+    }
+
+    public bool ContinueSearchOnFoot()
+    {
+        if (Status != PoliceResponseStatus.PursuingVehicle)
+        {
+            return false;
+        }
+
+        Status = PoliceResponseStatus.Responding;
+        RemainingEscapeSeconds = _escapeDurationSeconds;
+        Changed?.Invoke();
+        return true;
+    }
+
     public bool MarkArrived()
     {
         if (Status != PoliceResponseStatus.EnRoute)
@@ -115,7 +166,8 @@ public sealed class PoliceResponseState
     public bool AdvanceSearch(float deltaSeconds, bool hasVisualContact)
     {
         ValidateDelta(deltaSeconds);
-        if (Status != PoliceResponseStatus.Responding || deltaSeconds == 0.0f)
+        if (Status is not (PoliceResponseStatus.Responding or
+            PoliceResponseStatus.PursuingVehicle) || deltaSeconds == 0.0f)
         {
             return false;
         }
@@ -170,6 +222,7 @@ public sealed class PoliceResponseState
     public void Reset()
     {
         Status = PoliceResponseStatus.Available;
+        IncidentType = PoliceIncidentType.None;
         WantedLevel = 0;
         WitnessCount = 0;
         HasDefeatedOfficer = false;

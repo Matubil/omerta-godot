@@ -33,9 +33,14 @@ public sealed partial class GarageRegistrationInteraction : Area3D, IInteractabl
             }
 
             DriveableVehicleController? candidate = FindRegistrationCandidate();
-            return candidate is null
-                ? "Estacioná aquí un vehículo robado para registrarlo"
-                : $"Registrar {candidate.DisplayName} como vehículo familiar (${RegistrationCost})";
+            if (candidate is not null)
+            {
+                return $"Registrar {candidate.DisplayName} como vehículo familiar (${RegistrationCost})";
+            }
+
+            return HasPoliceMarkedVehicleNearby()
+                ? "Perdé a la policía antes de registrar el vehículo"
+                : "Estacioná aquí un vehículo robado para registrarlo";
         }
     }
 
@@ -53,7 +58,9 @@ public sealed partial class GarageRegistrationInteraction : Area3D, IInteractabl
         {
             _hud?.ShowStatus(
                 IsGarageAvailable
-                    ? "No hay un vehículo robado estacionado dentro del garaje."
+                    ? HasPoliceMarkedVehicleNearby()
+                        ? "Ese vehículo está siendo buscado. Perdé a la policía antes de registrarlo."
+                        : "No hay un vehículo robado estacionado dentro del garaje."
                     : "El garaje requiere que Taller El Faro sea de la familia y esté operativo.",
                 4.0f);
             return;
@@ -71,6 +78,8 @@ public sealed partial class GarageRegistrationInteraction : Area3D, IInteractabl
                 $"Fondos insuficientes: el registro cuesta ${RegistrationCost}.",
             VehicleRegistrationResult.GarageUnavailable =>
                 "El garaje de El Faro no está disponible.",
+            VehicleRegistrationResult.PoliceSearchActive =>
+                "Perdé a la policía antes de registrar ese vehículo.",
             _ => "Ese vehículo ya pertenece a la familia."
         };
         _hud?.ShowStatus(message, 5.0f);
@@ -83,7 +92,7 @@ public sealed partial class GarageRegistrationInteraction : Area3D, IInteractabl
         foreach (Node node in GetTree().GetNodesInGroup("driveable_vehicle"))
         {
             if (node is not DriveableVehicleController vehicle || vehicle.IsFamilyOwned ||
-                vehicle.IsDriven || !vehicle.Visible)
+                vehicle.IsPoliceMarked || vehicle.IsDriven || !vehicle.Visible)
             {
                 continue;
             }
@@ -99,6 +108,22 @@ public sealed partial class GarageRegistrationInteraction : Area3D, IInteractabl
         }
 
         return nearest;
+    }
+
+    private bool HasPoliceMarkedVehicleNearby()
+    {
+        float radiusSquared = RegistrationRadius * RegistrationRadius;
+        foreach (Node node in GetTree().GetNodesInGroup("driveable_vehicle"))
+        {
+            if (node is DriveableVehicleController vehicle && vehicle.IsPoliceMarked &&
+                vehicle.Visible &&
+                GlobalPosition.DistanceSquaredTo(vehicle.GlobalPosition) <= radiusSquared)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private bool IsGarageAvailable =>
