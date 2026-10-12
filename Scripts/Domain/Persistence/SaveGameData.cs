@@ -4,7 +4,7 @@ namespace Omerta.Domain.Persistence;
 
 public sealed class SaveGameData
 {
-    public const int CurrentVersion = 5;
+    public const int CurrentVersion = 6;
 
     public int Version { get; set; } = CurrentVersion;
 
@@ -71,12 +71,18 @@ public sealed class QuaternionSaveData
 
 public sealed class PlayerWeaponsSaveData
 {
+    public string EquippedWeaponId { get; set; } = string.Empty;
+
+    public bool IsHolstered { get; set; }
+
     public List<WeaponSaveData> Weapons { get; set; } = new();
 }
 
 public sealed class WeaponSaveData
 {
     public string WeaponId { get; set; } = string.Empty;
+
+    public string LocationId { get; set; } = string.Empty;
 
     public int MagazineAmmo { get; set; }
 

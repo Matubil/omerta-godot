@@ -12,7 +12,7 @@ public sealed partial class PlayerCombatController : Node
 {
     private PlayerController? _player;
     private Combatant? _combatant;
-    private HitscanWeaponController? _weapon;
+    private PlayerWeaponLoadoutController? _weapons;
     private PlayerInputAdapter? _input;
     private IsometricCameraController? _camera;
     private WorldCursorProjector? _cursor;
@@ -25,11 +25,11 @@ public sealed partial class PlayerCombatController : Node
     {
         _player = GetParent<PlayerController>();
         _combatant = _player.GetNode<Combatant>("Combatant");
-        _weapon = _player.GetNode<HitscanWeaponController>("WeaponController");
+        _weapons = _player.GetNode<PlayerWeaponLoadoutController>("WeaponLoadout");
         ResolveDependencies();
         _combatant.HealthChanged += OnHealthChanged;
         _combatant.Defeated += OnDefeated;
-        _weapon.Runtime.Changed += RefreshHud;
+        _weapons.Changed += RefreshHud;
         RefreshHud();
     }
 
@@ -41,21 +41,38 @@ public sealed partial class PlayerCombatController : Node
             _combatant.Defeated -= OnDefeated;
         }
 
-        if (_weapon?.Runtime is not null)
+        if (_weapons is not null)
         {
-            _weapon.Runtime.Changed -= RefreshHud;
+            _weapons.Changed -= RefreshHud;
         }
     }
 
     public override void _Process(double delta)
     {
         ResolveDependencies();
-        if (_input is null || _combatant is null || _weapon is null)
+        if (_input is null || _combatant is null || _weapons is null)
         {
             return;
         }
 
-        SetAiming(_input.IsAiming && !_combatant.IsDefeated && !_traversalBlocked);
+        if (_input.EquipSidearmPressed)
+        {
+            _weapons.TryEquipSidearm();
+        }
+
+        if (_input.EquipLongGunPressed && !_weapons.TryEquipLongGun())
+        {
+            _hud?.ShowStatus("La escopeta está guardada en el baúl del vehículo familiar.", 3.0f);
+        }
+
+        if (_input.HolsterWeaponPressed)
+        {
+            _weapons.ToggleHolster();
+        }
+
+        SetAiming(
+            _input.IsAiming && !_combatant.IsDefeated && !_traversalBlocked &&
+            !_weapons.IsHolstered);
         if (_combatant.IsDefeated || _traversalBlocked)
         {
             return;
@@ -63,19 +80,19 @@ public sealed partial class PlayerCombatController : Node
 
         if (_input.ReloadPressed)
         {
-            _weapon.TryReload();
+            _weapons.TryReload();
         }
 
         if (_input.FirePressed && _cursor?.HasAimPoint == true)
         {
-            _weapon.TryFire(_cursor.AimPoint - _weapon.FireOriginPosition, IsAiming);
+            _weapons.TryFire(_cursor.AimPoint - _weapons.FireOriginPosition, IsAiming);
         }
     }
 
     public void ResetCombat()
     {
         _combatant?.RestoreToFull();
-        _weapon?.ResetRuntime();
+        _weapons?.ResetLoadout();
         SetAiming(false);
         RefreshHud();
     }
@@ -83,7 +100,41 @@ public sealed partial class PlayerCombatController : Node
     public void RestoreCombat(int currentHealth, int magazineAmmo, int reserveAmmo)
     {
         _combatant?.RestoreCurrent(currentHealth);
-        _weapon?.RestoreRuntime(magazineAmmo, reserveAmmo);
+        if (_weapons is not null)
+        {
+            _weapons.RestoreLoadout(
+                magazineAmmo,
+                reserveAmmo,
+                _weapons.LongGunController.Runtime.AmmoInMagazine,
+                _weapons.LongGunController.Runtime.ReserveAmmo,
+                _weapons.IsLongGunCarried,
+                _weapons.EquippedWeaponId,
+                _weapons.IsHolstered);
+        }
+
+        SetAiming(false);
+        RefreshHud();
+    }
+
+    public void RestoreCombat(
+        int currentHealth,
+        int pistolMagazine,
+        int pistolReserve,
+        int shotgunMagazine,
+        int shotgunReserve,
+        bool shotgunCarried,
+        string equippedWeaponId,
+        bool holstered)
+    {
+        _combatant?.RestoreCurrent(currentHealth);
+        _weapons?.RestoreLoadout(
+            pistolMagazine,
+            pistolReserve,
+            shotgunMagazine,
+            shotgunReserve,
+            shotgunCarried,
+            equippedWeaponId,
+            holstered);
         SetAiming(false);
         RefreshHud();
     }
@@ -129,13 +180,17 @@ public sealed partial class PlayerCombatController : Node
             _hud?.SetHealth(_combatant.Health.Current, _combatant.Health.Maximum);
         }
 
-        if (_weapon?.Runtime is not null)
+        if (_weapons?.EquippedRuntime is not null)
         {
             _hud?.SetWeapon(
-                _weapon.Runtime.Specification.DisplayName,
-                _weapon.Runtime.AmmoInMagazine,
-                _weapon.Runtime.ReserveAmmo,
-                _weapon.Runtime.IsReloading);
+                _weapons.EquippedRuntime.Specification.DisplayName,
+                _weapons.EquippedRuntime.AmmoInMagazine,
+                _weapons.EquippedRuntime.ReserveAmmo,
+                _weapons.EquippedRuntime.IsReloading,
+                _weapons.IsHolstered,
+                _weapons.EquippedWeaponId == PlayerWeaponLoadoutController.ShotgunId
+                    ? "ARMA LARGA"
+                    : "ARMA CORTA");
         }
     }
 }

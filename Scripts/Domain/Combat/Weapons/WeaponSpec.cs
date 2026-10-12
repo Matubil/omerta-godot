@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Omerta.Domain.Combat.Weapons;
 
@@ -13,7 +14,10 @@ public sealed record WeaponSpec
         int magazineCapacity,
         double reloadDurationSeconds,
         float hipFireSpreadDegrees,
-        float aimSpreadDegrees)
+        float aimSpreadDegrees,
+        int pelletCount = 1,
+        bool canBeConcealed = true,
+        IEnumerable<string>? compatibleSlotIds = null)
     {
         if (string.IsNullOrWhiteSpace(id))
         {
@@ -28,7 +32,7 @@ public sealed record WeaponSpec
         if (damage <= 0 || fireIntervalSeconds <= 0 || effectiveRange <= 0 ||
             magazineCapacity <= 0 || reloadDurationSeconds <= 0 ||
             hipFireSpreadDegrees < 0 || aimSpreadDegrees < 0 ||
-            aimSpreadDegrees > hipFireSpreadDegrees)
+            aimSpreadDegrees > hipFireSpreadDegrees || pelletCount <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(damage), "Weapon values are outside their valid range.");
         }
@@ -42,6 +46,17 @@ public sealed record WeaponSpec
         ReloadDurationSeconds = reloadDurationSeconds;
         HipFireSpreadDegrees = hipFireSpreadDegrees;
         AimSpreadDegrees = aimSpreadDegrees;
+        PelletCount = pelletCount;
+        CanBeConcealed = canBeConcealed;
+        CompatibleSlotIds = new HashSet<string>(
+            compatibleSlotIds ?? new[] { WeaponSlotIds.Sidearm, WeaponSlotIds.LongGun },
+            StringComparer.Ordinal);
+        if (CompatibleSlotIds.Count == 0)
+        {
+            throw new ArgumentException(
+                "A weapon needs at least one compatible carried slot.",
+                nameof(compatibleSlotIds));
+        }
     }
 
     public string Id { get; }
@@ -53,6 +68,11 @@ public sealed record WeaponSpec
     public double ReloadDurationSeconds { get; }
     public float HipFireSpreadDegrees { get; }
     public float AimSpreadDegrees { get; }
+    public int PelletCount { get; }
+    public bool CanBeConcealed { get; }
+    public IReadOnlySet<string> CompatibleSlotIds { get; }
+
+    public bool CanUseSlot(string slotId) => CompatibleSlotIds.Contains(slotId);
 
     public float GetSpreadDegrees(bool isAiming) =>
         isAiming ? AimSpreadDegrees : HipFireSpreadDegrees;

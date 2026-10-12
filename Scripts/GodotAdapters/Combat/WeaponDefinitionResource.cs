@@ -33,6 +33,15 @@ public sealed partial class WeaponDefinitionResource : Resource
     [Export]
     public float AimSpreadDegrees { get; set; } = 0.65f;
 
+    [Export]
+    public int PelletCount { get; set; } = 1;
+
+    [Export]
+    public bool CanBeConcealed { get; set; } = true;
+
+    [Export]
+    public string CompatibleSlotId { get; set; } = WeaponSlotIds.Sidearm;
+
     public WeaponSpec CreateSpec() => new(
         Id,
         DisplayName,
@@ -42,5 +51,8 @@ public sealed partial class WeaponDefinitionResource : Resource
         MagazineCapacity,
         ReloadDurationSeconds,
         HipFireSpreadDegrees,
-        AimSpreadDegrees);
+        AimSpreadDegrees,
+        PelletCount,
+        CanBeConcealed,
+        new[] { CompatibleSlotId });
 }

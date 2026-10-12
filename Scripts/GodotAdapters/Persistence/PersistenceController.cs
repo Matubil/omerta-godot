@@ -3,6 +3,7 @@ using System.IO;
 using Godot;
 using Omerta.Domain.Missions;
 using Omerta.Domain.Persistence;
+using Omerta.Domain.Combat.Weapons;
 using Omerta.GodotAdapters.AI;
 using Omerta.GodotAdapters.Businesses;
 using Omerta.GodotAdapters.Characters;
@@ -28,7 +29,7 @@ public sealed partial class PersistenceController : Node
     private PlayerController? _player;
     private PlayerCombatController? _playerCombat;
     private Combatant? _playerCombatant;
-    private HitscanWeaponController? _playerWeapon;
+    private PlayerWeaponLoadoutController? _playerWeapons;
     private RivalController? _rival;
     private Combatant? _rivalCombatant;
     private WorkshopController? _workshop;
@@ -70,7 +71,7 @@ public sealed partial class PersistenceController : Node
 
         _playerCombat = _player.GetNode<PlayerCombatController>("PlayerCombatController");
         _playerCombatant = _player.GetNode<Combatant>("Combatant");
-        _playerWeapon = _player.GetNode<HitscanWeaponController>("WeaponController");
+        _playerWeapons = _player.GetNode<PlayerWeaponLoadoutController>("WeaponLoadout");
         _rivalCombatant = _rival.GetNode<Combatant>("Combatant");
         foreach (string argument in OS.GetCmdlineUserArgs())
         {
@@ -159,11 +160,23 @@ public sealed partial class PersistenceController : Node
             CharacterId = "character.merchant.san-telmo",
             CurrentHealth = _depot.MerchantHealth
         });
+        data.PlayerWeapons.EquippedWeaponId = _playerWeapons!.EquippedWeaponId;
+        data.PlayerWeapons.IsHolstered = _playerWeapons.IsHolstered;
         data.PlayerWeapons.Weapons.Add(new WeaponSaveData
         {
-            WeaponId = _playerWeapon!.Runtime.Specification.Id,
-            MagazineAmmo = _playerWeapon.Runtime.AmmoInMagazine,
-            ReserveAmmo = _playerWeapon.Runtime.ReserveAmmo
+            WeaponId = _playerWeapons.SidearmController.Runtime.Specification.Id,
+            LocationId = WeaponSlotIds.Sidearm,
+            MagazineAmmo = _playerWeapons.SidearmController.Runtime.AmmoInMagazine,
+            ReserveAmmo = _playerWeapons.SidearmController.Runtime.ReserveAmmo
+        });
+        data.PlayerWeapons.Weapons.Add(new WeaponSaveData
+        {
+            WeaponId = _playerWeapons.LongGunController.Runtime.Specification.Id,
+            LocationId = _playerWeapons.IsLongGunCarried
+                ? WeaponSlotIds.LongGun
+                : WeaponSlotIds.FamilyVehicleTrunk,
+            MagazineAmmo = _playerWeapons.LongGunController.Runtime.AmmoInMagazine,
+            ReserveAmmo = _playerWeapons.LongGunController.Runtime.ReserveAmmo
         });
         data.Missions.Add(_stageFive!.CreateMissionSaveData());
         data.Missions.Add(_sabotageMission!.CreateMissionSaveData());
@@ -194,8 +207,13 @@ public sealed partial class PersistenceController : Node
             restore.DepotMerchantHealth);
         _playerCombat!.RestoreCombat(
             restore.PlayerHealth,
-            restore.Weapon.MagazineAmmo,
-            restore.Weapon.ReserveAmmo);
+            restore.Pistol.MagazineAmmo,
+            restore.Pistol.ReserveAmmo,
+            restore.Shotgun.MagazineAmmo,
+            restore.Shotgun.ReserveAmmo,
+            restore.Shotgun.LocationId == WeaponSlotIds.LongGun,
+            data.PlayerWeapons.EquippedWeaponId,
+            data.PlayerWeapons.IsHolstered);
         _stageFive.RestoreAfterLoad(restore.Mission, restore.DefenseMission);
         _sabotageMission!.RestoreAfterLoad(restore.SabotageMission);
     }
@@ -210,8 +228,7 @@ public sealed partial class PersistenceController : Node
             _storage!.Write(json);
             _serializer.Deserialize(_storage.Read());
             _hud?.ShowStatus(
-                $"Partida guardada · Pistola {data.PlayerWeapons.Weapons[0].MagazineAmmo}/" +
-                $"{data.PlayerWeapons.Weapons[0].ReserveAmmo}",
+                $"Partida guardada · {DescribeAmmunition(data)}",
                 4.0f);
             GD.Print($"Partida guardada ({_storage.FileSize} bytes): {_storage.FilePath}");
             return true;
@@ -236,8 +253,7 @@ public sealed partial class PersistenceController : Node
             SaveGameData data = _serializer.Deserialize(_storage.Read());
             RestoreFromData(data);
             _hud?.ShowStatus(
-                $"Partida cargada · Pistola {data.PlayerWeapons.Weapons[0].MagazineAmmo}/" +
-                $"{data.PlayerWeapons.Weapons[0].ReserveAmmo}",
+                $"Partida cargada · {DescribeAmmunition(data)}",
                 4.0f);
             GD.Print($"Partida cargada: {_storage.FilePath}");
             return true;
@@ -281,6 +297,18 @@ public sealed partial class PersistenceController : Node
         int exitCode = 1;
         try
         {
+            if (!_playerWeapons!.IsLongGunCarried)
+            {
+                _playerWeapons.TryToggleLongGunStorage(out _);
+            }
+
+            _playerWeapons.TryEquipLongGun();
+            _playerWeapons.LongGunController.RestoreRuntime(4, 19);
+            if (!_playerWeapons.IsHolstered)
+            {
+                _playerWeapons.ToggleHolster();
+            }
+
             SaveGameData expected = CaptureCurrentState();
             if (!SaveNow())
             {
@@ -289,6 +317,7 @@ public sealed partial class PersistenceController : Node
 
             _economy!.Economy.AddMoney(17);
             _player!.GlobalPosition += new Vector3(3.0f, 0.0f, 3.0f);
+            _playerWeapons.ResetLoadout();
             _playerCombat!.RestoreCombat(50, 1, 2);
             _rival!.RestorePersistentState(0);
             _workshop!.RestorePersistentState(
@@ -367,7 +396,7 @@ public sealed partial class PersistenceController : Node
 
             GD.Print(
                 "Persistence smoke passed: three businesses, merchant health and three " +
-                "campaign missions save/mutation/exact restore verified.");
+                "campaign missions plus carried/stored weapon loadout save/mutation/exact restore verified.");
             exitCode = 0;
         }
         catch (Exception exception)
@@ -437,7 +466,12 @@ public sealed partial class PersistenceController : Node
         int merchantHealth = FindHealth(data, merchant);
         Combatant depotMerchant = _depot.GetNode<Combatant>("Interior/Merchant/Combatant");
         int depotMerchantHealth = FindOptionalHealth(data, depotMerchant);
-        WeaponSaveData weapon = FindWeapon(data, _playerWeapon!.Runtime.Specification.Id);
+        WeaponSaveData pistol = FindWeapon(
+            data,
+            _playerWeapons!.SidearmController.Runtime.Specification.Id);
+        WeaponSaveData shotgun = FindWeapon(
+            data,
+            _playerWeapons.LongGunController.Runtime.Specification.Id);
         MissionProgressSaveData? mission = _stageFive!.ValidateMissionProgress(data.Missions);
         MissionProgressSaveData? defenseMission = _stageFive.ValidateDefenseMissionProgress(
             data.Missions,
@@ -445,11 +479,17 @@ public sealed partial class PersistenceController : Node
         MissionProgressSaveData? sabotageMission = _sabotageMission!.ValidateMissionProgress(
             data.Missions,
             barBusiness?.IsCriticalAssetOperational ?? true);
-        if (weapon.MagazineAmmo < 0 ||
-            weapon.MagazineAmmo > _playerWeapon.Runtime.Specification.MagazineCapacity ||
-            weapon.ReserveAmmo < 0)
+        ValidateWeapon(pistol, _playerWeapons.SidearmController.Runtime, WeaponSlotIds.Sidearm);
+        ValidateWeapon(
+            shotgun,
+            _playerWeapons.LongGunController.Runtime,
+            WeaponSlotIds.LongGun,
+            WeaponSlotIds.FamilyVehicleTrunk);
+        if (data.PlayerWeapons.EquippedWeaponId != pistol.WeaponId &&
+            (data.PlayerWeapons.EquippedWeaponId != shotgun.WeaponId ||
+             shotgun.LocationId != WeaponSlotIds.LongGun))
         {
-            throw new InvalidDataException("Saved ammunition is outside the valid range.");
+            throw new InvalidDataException("The equipped weapon is not carried by the player.");
         }
 
         Vector3 position = new(
@@ -474,7 +514,8 @@ public sealed partial class PersistenceController : Node
             rivalHealth,
             merchantHealth,
             depotMerchantHealth,
-            weapon,
+            pistol,
+            shotgun,
             mission,
             defenseMission,
             sabotageMission,
@@ -617,10 +658,40 @@ public sealed partial class PersistenceController : Node
         return match ?? throw new InvalidDataException($"Weapon '{weaponId}' is missing from the save.");
     }
 
+    private static void ValidateWeapon(
+        WeaponSaveData weapon,
+        Omerta.Domain.Combat.Weapons.WeaponRuntime runtime,
+        params string[] allowedLocations)
+    {
+        if (weapon.MagazineAmmo < 0 ||
+            weapon.MagazineAmmo > runtime.Specification.MagazineCapacity ||
+            weapon.ReserveAmmo < 0 ||
+            Array.IndexOf(allowedLocations, weapon.LocationId) < 0)
+        {
+            throw new InvalidDataException(
+                $"Saved state for weapon '{weapon.WeaponId}' is outside the valid range.");
+        }
+    }
+
+    private static string DescribeAmmunition(SaveGameData data)
+    {
+        string description = string.Empty;
+        foreach (WeaponSaveData weapon in data.PlayerWeapons.Weapons)
+        {
+            string label = weapon.WeaponId.Contains("shotgun", StringComparison.Ordinal)
+                ? "Escopeta"
+                : "Pistola";
+            description += string.IsNullOrEmpty(description) ? string.Empty : " · ";
+            description += $"{label} {weapon.MagazineAmmo}/{weapon.ReserveAmmo}";
+        }
+
+        return description;
+    }
+
     private void EnsureReady()
     {
         if (_storage is null || _player is null || _playerCombat is null ||
-            _playerCombatant is null || _playerWeapon is null || _rival is null ||
+            _playerCombatant is null || _playerWeapons is null || _rival is null ||
             _rivalCombatant is null || _workshop is null || _economy is null ||
             _bar is null || _depot is null || _stageFive is null || _sabotageMission is null)
         {
@@ -642,7 +713,8 @@ public sealed partial class PersistenceController : Node
         int RivalHealth,
         int MerchantHealth,
         int DepotMerchantHealth,
-        WeaponSaveData Weapon,
+        WeaponSaveData Pistol,
+        WeaponSaveData Shotgun,
         MissionProgressSaveData? Mission,
         MissionProgressSaveData? DefenseMission,
         MissionProgressSaveData? SabotageMission,

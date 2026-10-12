@@ -98,13 +98,22 @@ public sealed partial class HudController : CanvasLayer
         }
     }
 
-    public void SetWeapon(string name, int magazine, int reserve, bool reloading)
+    public void SetWeapon(
+        string name,
+        int magazine,
+        int reserve,
+        bool reloading,
+        bool holstered = false,
+        string slot = "")
     {
         if (_weaponLabel is not null)
         {
-            _weaponLabel.Text = reloading
-                ? $"{name.ToUpperInvariant()}  RECARGANDO…"
-                : $"{name.ToUpperInvariant()}  {magazine} / {reserve}";
+            string prefix = string.IsNullOrWhiteSpace(slot) ? string.Empty : $"{slot} · ";
+            _weaponLabel.Text = holstered
+                ? $"{prefix}{name.ToUpperInvariant()} · ENFUNDADA"
+                : reloading
+                    ? $"{prefix}{name.ToUpperInvariant()} · RECARGANDO…"
+                    : $"{prefix}{name.ToUpperInvariant()}  {magazine} / {reserve}";
         }
     }
 

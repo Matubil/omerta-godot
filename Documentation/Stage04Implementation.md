@@ -19,7 +19,7 @@
 | --- | --- |
 | Protagonista | Posición, rotación y salud |
 | Combate | Salud del rival y de los comerciantes de El Faro y San Telmo |
-| Arma | Munición del cargador y reserva |
+| Armas | Munición independiente, ubicación, arma equipada y enfundado |
 | Economía | Saldo actual |
 | Taller El Faro | Propietario y estado del punto operativo |
 | Bar La Niebla | Propietario y estado del punto operativo |
@@ -51,7 +51,7 @@ mismo hecho dos veces.
 ## Validación
 
 - Compilación de juego y tests sin errores ni advertencias.
-- 40 tests NUnit aprobados en el estado actual del proyecto.
+- 45 tests NUnit aprobados en el estado actual del proyecto.
 - Round trip JSON y rechazo explícito de versiones incompatibles.
 - Reemplazo atómico de archivo y limpieza del temporal.
 - Prueba integrada headless: guardar, alterar dinero, pose, salud, munición y negocio,
@@ -60,8 +60,10 @@ mismo hecho dos veces.
 
 ## Ampliación posterior
 
-El formato actual es versión 5 e incluye Bar La Niebla, Depósito San Telmo y las tres
-misiones de campaña. Las partidas de versión 1, 2, 3 y 4 se migran conservando sus datos
-existentes; la ausencia de un negocio incorporado después se interpreta como su estado
-inicial, sin inventar avance ni recompensas. El controlador de South District se deriva
-de los propietarios de sus tres negocios y por eso no se serializa por separado.
+El formato actual es versión 6 e incluye Bar La Niebla, Depósito San Telmo, las tres
+misiones de campaña y el loadout limitado del protagonista. Las partidas de versión 1 a
+5 se migran conservando sus datos existentes; la escopeta nueva comienza dentro del baúl
+del vehículo familiar y la pistola queda equipada. La ausencia de un negocio incorporado
+después se interpreta como su estado inicial, sin inventar avance ni recompensas. El
+controlador de South District se deriva de los propietarios de sus tres negocios y por
+eso no se serializa por separado.

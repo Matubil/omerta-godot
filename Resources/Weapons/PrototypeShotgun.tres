@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="WeaponDefinitionResource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/Combat/WeaponDefinitionResource.cs" id="1_definition"]
+
+[resource]
+script = ExtResource("1_definition")
+Id = "weapon.prototype-shotgun"
+DisplayName = "Escopeta recortada"
+Damage = 12
+FireIntervalSeconds = 1.05
+EffectiveRange = 22.0
+MagazineCapacity = 5
+ReloadDurationSeconds = 2.2
+HipFireSpreadDegrees = 10.0
+AimSpreadDegrees = 6.0
+PelletCount = 8
+CanBeConcealed = false
+CompatibleSlotId = "weapon-slot.long-gun"

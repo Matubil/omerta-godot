@@ -46,10 +46,23 @@ public sealed partial class HitscanWeaponController : Node
             return false;
         }
 
-        Vector3 shotDirection = ApplySpread(
-            direction.Normalized(),
-            Runtime.Specification.GetSpreadDegrees(isAiming));
-        ResolveRaycast(shotDirection);
+        Vector3 traceEnd = FireOriginPosition;
+        bool didHit = false;
+        for (int pellet = 0; pellet < Runtime.Specification.PelletCount; pellet++)
+        {
+            Vector3 shotDirection = ApplySpread(
+                direction.Normalized(),
+                Runtime.Specification.GetSpreadDegrees(isAiming));
+            (Vector3 pelletEnd, bool pelletHit) = ResolveRaycast(shotDirection);
+            if (pellet == 0 || pelletHit)
+            {
+                traceEnd = pelletEnd;
+            }
+
+            didHit |= pelletHit;
+        }
+
+        ShotResolved?.Invoke(FireOriginPosition, traceEnd, didHit);
         return true;
     }
 
@@ -81,11 +94,11 @@ public sealed partial class HitscanWeaponController : Node
         return direction.Rotated(Vector3.Up, yaw).Rotated(right.Normalized(), pitch).Normalized();
     }
 
-    private void ResolveRaycast(Vector3 direction)
+    private (Vector3 TraceEnd, bool DidHit) ResolveRaycast(Vector3 direction)
     {
         if (_ownerBody is null || _owner is null)
         {
-            return;
+            return (FireOriginPosition, false);
         }
 
         Vector3 origin = FireOriginPosition;
@@ -108,7 +121,7 @@ public sealed partial class HitscanWeaponController : Node
         }
 
         SpawnTracer(origin, traceEnd);
-        ShotResolved?.Invoke(origin, traceEnd, didHit);
+        return (traceEnd, didHit);
     }
 
     private void SpawnTracer(Vector3 origin, Vector3 end)

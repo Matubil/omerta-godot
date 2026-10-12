@@ -25,6 +25,9 @@ public sealed class PersistenceTests
         Assert.That(restored.PlayerPose.Position.X, Is.EqualTo(48.5f));
         Assert.That(restored.PlayerWeapons.Weapons[0].MagazineAmmo, Is.EqualTo(3));
         Assert.That(restored.PlayerWeapons.Weapons[0].ReserveAmmo, Is.EqualTo(21));
+        Assert.That(restored.PlayerWeapons.EquippedWeaponId, Is.EqualTo("weapon.prototype-shotgun"));
+        Assert.That(restored.PlayerWeapons.IsHolstered, Is.True);
+        Assert.That(restored.PlayerWeapons.Weapons[1].LocationId, Is.EqualTo(WeaponSlotIds.LongGun));
         Assert.That(restored.Missions[0].MissionId, Is.EqualTo("mission.el-faro-takeover"));
         Assert.That(restored.Missions[0].Status, Is.EqualTo("TakeControl"));
         Assert.That(restored.Businesses[1].BusinessId, Is.EqualTo("business.la-niebla-bar"));
@@ -54,13 +57,15 @@ public sealed class PersistenceTests
     {
         SaveGameSerializer serializer = new();
         string oldJson = serializer.Serialize(CreateSaveGame())
-            .Replace("\"version\": 5", "\"version\": 1");
+            .Replace("\"version\": 6", "\"version\": 1");
 
         SaveGameData migrated = serializer.Deserialize(oldJson);
 
         Assert.That(migrated.Version, Is.EqualTo(SaveGameData.CurrentVersion));
         Assert.That(migrated.Missions, Is.Empty);
         Assert.That(migrated.Economy.Balance, Is.EqualTo(350));
+        Assert.That(migrated.PlayerWeapons.EquippedWeaponId, Is.EqualTo("weapon.prototype-pistol"));
+        Assert.That(migrated.PlayerWeapons.Weapons[1].LocationId, Is.EqualTo(WeaponSlotIds.FamilyVehicleTrunk));
     }
 
     [Test]
@@ -72,7 +77,7 @@ public sealed class PersistenceTests
         legacy.CharacterCombatStates.RemoveAt(3);
         legacy.Missions.RemoveRange(1, 2);
         string oldJson = serializer.Serialize(legacy)
-            .Replace("\"version\": 5", "\"version\": 2");
+            .Replace("\"version\": 6", "\"version\": 2");
 
         SaveGameData migrated = serializer.Deserialize(oldJson);
 
@@ -90,7 +95,7 @@ public sealed class PersistenceTests
         legacy.CharacterCombatStates.RemoveAt(3);
         legacy.Missions.RemoveAt(2);
         string oldJson = serializer.Serialize(legacy)
-            .Replace("\"version\": 5", "\"version\": 3");
+            .Replace("\"version\": 6", "\"version\": 3");
 
         SaveGameData migrated = serializer.Deserialize(oldJson);
 
@@ -107,7 +112,7 @@ public sealed class PersistenceTests
         SaveGameData legacy = CreateSaveGame();
         legacy.Missions.RemoveAt(2);
         string oldJson = serializer.Serialize(legacy)
-            .Replace("\"version\": 5", "\"version\": 4");
+            .Replace("\"version\": 6", "\"version\": 4");
 
         SaveGameData migrated = serializer.Deserialize(oldJson);
 
@@ -130,6 +135,26 @@ public sealed class PersistenceTests
         Assert.That(json, Does.Not.Contain("Companion"));
         Assert.That(json, Does.Not.Contain("Counterattack"));
         Assert.That(json, Does.Not.Contain("Territory"));
+    }
+
+    [Test]
+    public void VersionFiveSaveMigratesShotgunIntoFamilyVehicleTrunk()
+    {
+        SaveGameSerializer serializer = new();
+        SaveGameData legacy = CreateSaveGame();
+        legacy.PlayerWeapons.Weapons.RemoveAt(1);
+        legacy.PlayerWeapons.EquippedWeaponId = string.Empty;
+        legacy.PlayerWeapons.IsHolstered = false;
+        string oldJson = serializer.Serialize(legacy)
+            .Replace("\"version\": 6", "\"version\": 5");
+
+        SaveGameData migrated = serializer.Deserialize(oldJson);
+
+        Assert.That(migrated.Version, Is.EqualTo(SaveGameData.CurrentVersion));
+        Assert.That(migrated.PlayerWeapons.Weapons, Has.Count.EqualTo(2));
+        Assert.That(migrated.PlayerWeapons.Weapons[1].WeaponId, Is.EqualTo("weapon.prototype-shotgun"));
+        Assert.That(migrated.PlayerWeapons.Weapons[1].LocationId, Is.EqualTo(WeaponSlotIds.FamilyVehicleTrunk));
+        Assert.That(migrated.PlayerWeapons.EquippedWeaponId, Is.EqualTo("weapon.prototype-pistol"));
     }
 
     [Test]
@@ -195,6 +220,11 @@ public sealed class PersistenceTests
         SaveGameData data = new()
         {
             Economy = new EconomySaveData { Balance = 350 },
+            PlayerWeapons = new PlayerWeaponsSaveData
+            {
+                EquippedWeaponId = "weapon.prototype-shotgun",
+                IsHolstered = true
+            },
             PlayerPose = new PlayerPoseSaveData
             {
                 Position = new Vector3SaveData { X = 48.5f, Y = 0.25f, Z = -2.0f },
@@ -242,8 +272,16 @@ public sealed class PersistenceTests
         data.PlayerWeapons.Weapons.Add(new WeaponSaveData
         {
             WeaponId = "weapon.prototype-pistol",
+            LocationId = WeaponSlotIds.Sidearm,
             MagazineAmmo = 3,
             ReserveAmmo = 21
+        });
+        data.PlayerWeapons.Weapons.Add(new WeaponSaveData
+        {
+            WeaponId = "weapon.prototype-shotgun",
+            LocationId = WeaponSlotIds.LongGun,
+            MagazineAmmo = 4,
+            ReserveAmmo = 20
         });
         data.Missions.Add(new MissionProgressSaveData
         {

@@ -77,6 +77,21 @@ reload={
 "events": [Object(InputEventKey,"physical_keycode":82)
 ]
 }
+equip_sidearm={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":49)
+]
+}
+equip_long_gun={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":50)
+]
+}
+holster_weapon={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":72)
+]
+}
 restart_encounter={
 "deadzone": 0.2,
 "events": [Object(InputEventKey,"physical_keycode":84)

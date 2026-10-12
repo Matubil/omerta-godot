@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text.Json;
+using Omerta.Domain.Combat.Weapons;
 using Omerta.Domain.Persistence;
 
 namespace Omerta.Infrastructure.Persistence;
@@ -38,18 +39,14 @@ public sealed class SaveGameSerializer
             throw new InvalidDataException("The save file is not valid JSON.", exception);
         }
 
-        if (data.Version == 1)
+        int sourceVersion = data.Version;
+        if (sourceVersion == 1)
         {
             data.Missions = new();
-            data.Version = SaveGameData.CurrentVersion;
         }
-        else if (data.Version is 2 or 3 or 4)
+        else if (sourceVersion is not (2 or 3 or 4 or 5 or SaveGameData.CurrentVersion))
         {
-            data.Version = SaveGameData.CurrentVersion;
-        }
-        else if (data.Version != SaveGameData.CurrentVersion)
-        {
-            throw new SaveGameVersionException(data.Version, SaveGameData.CurrentVersion);
+            throw new SaveGameVersionException(sourceVersion, SaveGameData.CurrentVersion);
         }
 
         data.Economy ??= new EconomySaveData();
@@ -61,7 +58,43 @@ public sealed class SaveGameSerializer
         data.PlayerWeapons ??= new PlayerWeaponsSaveData();
         data.PlayerWeapons.Weapons ??= new();
         data.Missions ??= new();
+        if (sourceVersion <= 5)
+        {
+            MigrateWeaponLoadout(data.PlayerWeapons);
+        }
+
+        data.Version = SaveGameData.CurrentVersion;
         return data;
+    }
+
+    private static void MigrateWeaponLoadout(PlayerWeaponsSaveData weapons)
+    {
+        WeaponSaveData? pistol = weapons.Weapons.Find(
+            weapon => weapon.WeaponId == "weapon.prototype-pistol");
+        if (pistol is not null)
+        {
+            pistol.LocationId = WeaponSlotIds.Sidearm;
+        }
+
+        WeaponSaveData? shotgun = weapons.Weapons.Find(
+            weapon => weapon.WeaponId == "weapon.prototype-shotgun");
+        if (shotgun is null)
+        {
+            weapons.Weapons.Add(new WeaponSaveData
+            {
+                WeaponId = "weapon.prototype-shotgun",
+                LocationId = WeaponSlotIds.FamilyVehicleTrunk,
+                MagazineAmmo = 5,
+                ReserveAmmo = 20
+            });
+        }
+        else
+        {
+            shotgun.LocationId = WeaponSlotIds.FamilyVehicleTrunk;
+        }
+
+        weapons.EquippedWeaponId = pistol?.WeaponId ?? string.Empty;
+        weapons.IsHolstered = false;
     }
 }
 

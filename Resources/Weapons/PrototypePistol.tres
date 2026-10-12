@@ -13,3 +13,6 @@ MagazineCapacity = 7
 ReloadDurationSeconds = 1.4
 HipFireSpreadDegrees = 3.5
 AimSpreadDegrees = 0.65
+PelletCount = 1
+CanBeConcealed = true
+CompatibleSlotId = "weapon-slot.sidearm"

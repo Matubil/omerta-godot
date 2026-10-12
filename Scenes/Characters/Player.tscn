@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=17 format=3]
 
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/Characters/PlayerController.cs" id="1_player"]
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/Interaction/PlayerInteractor.cs" id="2_interactor"]
@@ -8,6 +8,8 @@
 [ext_resource type="Resource" path="res://Resources/Weapons/PrototypePistol.tres" id="6_pistol"]
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/Characters/PlayerTraversalController.cs" id="7_traversal"]
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/Characters/PlayerCoverController.cs" id="8_cover"]
+[ext_resource type="Resource" path="res://Resources/Weapons/PrototypeShotgun.tres" id="9_shotgun"]
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/Combat/PlayerWeaponLoadoutController.cs" id="10_loadout"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape_player"]
 radius = 0.35
@@ -65,6 +67,15 @@ mesh = SubResource("Mesh_weapon")
 [node name="Muzzle" type="Marker3D" parent="Visual/Weapon"]
 position = Vector3(0, 0, 0.31)
 
+[node name="BackWeapon" type="Node3D" parent="Visual"]
+visible = false
+position = Vector3(-0.24, 0.3, -0.08)
+rotation = Vector3(0.12, 0, 0.38)
+scale = Vector3(1.05, 1.0, 2.6)
+
+[node name="Mesh" type="MeshInstance3D" parent="Visual/BackWeapon"]
+mesh = SubResource("Mesh_weapon")
+
 [node name="StandingClearance" type="RayCast3D" parent="."]
 position = Vector3(0, 1.15, 0)
 target_position = Vector3(0, 0.7, 0)
@@ -93,6 +104,14 @@ MaximumHealth = 100
 script = ExtResource("4_weapon_controller")
 Definition = ExtResource("6_pistol")
 InitialReserveAmmo = 28
+
+[node name="LongGunWeaponController" type="Node" parent="."]
+script = ExtResource("4_weapon_controller")
+Definition = ExtResource("9_shotgun")
+InitialReserveAmmo = 20
+
+[node name="WeaponLoadout" type="Node" parent="."]
+script = ExtResource("10_loadout")
 
 [node name="PlayerCombatController" type="Node" parent="."]
 script = ExtResource("5_player_combat")

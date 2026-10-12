@@ -24,6 +24,9 @@ Abrir `project.godot` con la edición .NET de Godot 4.7.2 y ejecutar el proyecto
 | Botón derecho | ADS |
 | Botón izquierdo | Disparar |
 | `R` | Recargar |
+| `1` | Equipar/desenfundar pistola |
+| `2` | Equipar/desenfundar arma larga si está encima |
+| `H` | Enfundar o desenfundar el arma seleccionada |
 | `Q` | Orden contextual a la crew: mover o atacar |
 | `G` | Reagrupar la crew con el protagonista |
 | `F5` | Guardar partida |
@@ -73,6 +76,12 @@ perder el contacto con la superficie y saltar obstáculos bajos cuando existe un
 aterrizaje seguro. El vault cancela ADS y bloquea el arma hasta recuperar la colisión.
 El graybox incluye tres superficies rotuladas para probar estas reglas.
 
+El loadout del protagonista está limitado a una pistola y una sola arma larga. La
+escopeta recortada comienza guardada en el vehículo familiar que llega con los
+refuerzos: se retira o devuelve desde su baúl con `E`, conserva su munición y se muestra
+en la espalda cuando se transporta sin estar equipada. Los autos comunes no acceden al
+arsenal; esa capacidad queda reservada para vehículos propios o de la familia.
+
 La partida manual se guarda como JSON versionado bajo `user://save_0.json`. Conserva
 pose, salud, munición, economía, propiedad y operatividad de los tres negocios, y
 progreso de misión. Tras una
@@ -114,3 +123,6 @@ Depósito San Telmo y el control territorial están detallados en
 
 La misión defensiva urgente de Taller El Faro está detallada en
 [`Documentation/Stage13DefenseMission.md`](Documentation/Stage13DefenseMission.md).
+
+El loadout limitado y el arsenal del vehículo familiar están detallados en
+[`Documentation/Stage14WeaponLoadoutAndVehicleArsenal.md`](Documentation/Stage14WeaponLoadoutAndVehicleArsenal.md).

@@ -11,6 +11,8 @@ using Omerta.GodotAdapters.Missions;
 using Omerta.GodotAdapters.Navigation;
 using Omerta.GodotAdapters.StageFive;
 using Omerta.GodotAdapters.Territories;
+using Omerta.GodotAdapters.Interaction;
+using Omerta.Domain.Combat.Weapons;
 using Omerta.Presentation;
 
 namespace Omerta.GodotAdapters.Diagnostics;
@@ -30,6 +32,8 @@ public sealed partial class PlaytestDiagnosticsController : Node
     private SabotageMissionController? _sabotageMission;
     private EconomyController? _economy;
     private HitscanWeaponController? _weapon;
+    private PlayerWeaponLoadoutController? _weaponLoadout;
+    private VehicleArsenalInteraction? _vehicleArsenal;
     private SharedNavigationWorld? _navigation;
     private bool _visible;
     private bool _runSmokeTest;
@@ -40,6 +44,7 @@ public sealed partial class PlaytestDiagnosticsController : Node
     private bool _runBarSabotageSmokeTest;
     private bool _runTerritorySmokeTest;
     private bool _runDefenseMissionSmokeTest;
+    private bool _runWeaponLoadoutSmokeTest;
     private int _barSabotageSmokeStage;
     private int _barSabotageWaitFrames = 120;
     private int _barBalanceBeforeSabotage;
@@ -102,6 +107,11 @@ public sealed partial class PlaytestDiagnosticsController : Node
                 _runDefenseMissionSmokeTest = true;
                 _smokeFramesRemaining = 120;
             }
+            else if (argument == "--weapon-loadout-smoke")
+            {
+                _runWeaponLoadoutSmokeTest = true;
+                _smokeFramesRemaining = 120;
+            }
         }
     }
 
@@ -157,6 +167,11 @@ public sealed partial class PlaytestDiagnosticsController : Node
             _runDefenseMissionSmokeTest = false;
             RunDefenseMissionSmokeTest();
         }
+        else if (_runWeaponLoadoutSmokeTest && --_smokeFramesRemaining <= 0)
+        {
+            _runWeaponLoadoutSmokeTest = false;
+            RunWeaponLoadoutSmokeTest();
+        }
     }
 
     private void ResolveDependencies()
@@ -172,7 +187,58 @@ public sealed partial class PlaytestDiagnosticsController : Node
         _sabotageMission ??= GetTree().GetFirstNodeInGroup("sabotage_mission") as SabotageMissionController;
         _economy ??= GetTree().GetFirstNodeInGroup("economy") as EconomyController;
         _weapon ??= _player?.GetNodeOrNull<HitscanWeaponController>("WeaponController");
+        _weaponLoadout ??= _player?.GetNodeOrNull<PlayerWeaponLoadoutController>("WeaponLoadout");
+        Node3D? familyVehicle = GetTree().GetFirstNodeInGroup("family_vehicle") as Node3D;
+        _vehicleArsenal ??= familyVehicle?.GetNodeOrNull<VehicleArsenalInteraction>("ArsenalTrunk");
         _navigation ??= GetTree().GetFirstNodeInGroup("shared_navigation") as SharedNavigationWorld;
+    }
+
+    private void RunWeaponLoadoutSmokeTest()
+    {
+        int exitCode = 1;
+        try
+        {
+            ResolveDependencies();
+            Require(_weaponLoadout is not null, "player weapon loadout");
+            Require(_vehicleArsenal is not null, "family vehicle arsenal trunk");
+            Require(_weaponLoadout!.EquippedWeaponId == PlayerWeaponLoadoutController.PistolId,
+                "pistol equipped at start");
+            Require(!_weaponLoadout.IsLongGunCarried, "shotgun begins inside the family vehicle");
+            Require(!_weaponLoadout.TryEquipLongGun(), "stored shotgun cannot be selected");
+
+            Node3D vehicle = _vehicleArsenal!.GetParent<Node3D>();
+            vehicle.Visible = true;
+            Require(_vehicleArsenal.CanInteract, "visible family trunk can be used");
+            _vehicleArsenal.Interact();
+            Require(_weaponLoadout.IsLongGunCarried, "shotgun transferred to long-gun slot");
+            Require(_weaponLoadout.TryEquipLongGun(), "carried shotgun can be selected");
+            Require(_weaponLoadout.EquippedRuntime?.Specification.PelletCount == 8,
+                "Unity shotgun pellet parity");
+            int ammunitionBefore = _weaponLoadout.EquippedRuntime!.AmmoInMagazine;
+            Require(_weaponLoadout.EquippedRuntime.TryFire(0.0), "shotgun runtime fires");
+            Require(_weaponLoadout.EquippedRuntime.AmmoInMagazine == ammunitionBefore - 1,
+                "one shell consumed for all pellets");
+
+            _weaponLoadout.ToggleHolster();
+            Require(_weaponLoadout.IsHolstered, "weapon can be holstered");
+            _vehicleArsenal.Interact();
+            Require(!_weaponLoadout.IsLongGunCarried, "shotgun returned to trunk");
+            Require(_weaponLoadout.LongGunController.Runtime.AmmoInMagazine == ammunitionBefore - 1,
+                "trunk storage preserves ammunition");
+
+            GD.Print(
+                "Weapon loadout smoke passed: limited slots, holster, shotgun pellets and " +
+                "family-vehicle trunk transfer verified.");
+            exitCode = 0;
+        }
+        catch (Exception exception)
+        {
+            GD.PushError($"Weapon loadout smoke failed: {exception}");
+        }
+        finally
+        {
+            GetTree().Quit(exitCode);
+        }
     }
 
     private void RefreshOverlay()

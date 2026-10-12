@@ -78,7 +78,7 @@ public sealed partial class StageFiveController : Node3D
     private EconomyController? _economy;
     private Node3D? _player;
     private Combatant? _playerCombatant;
-    private HitscanWeaponController? _playerWeapon;
+    private PlayerWeaponLoadoutController? _playerWeapons;
     private WitnessController? _witness;
     private PoliceOfficerController? _policeOfficer;
     private CounterattackerController? _counterattacker;
@@ -132,7 +132,7 @@ public sealed partial class StageFiveController : Node3D
         }
 
         _playerCombatant = _player.GetNode<Combatant>("Combatant");
-        _playerWeapon = _player.GetNode<HitscanWeaponController>("WeaponController");
+        _playerWeapons = _player.GetNode<PlayerWeaponLoadoutController>("WeaponLoadout");
         _witness = GetNode<WitnessController>("Witness");
         _policeVehicle = GetNode<Node3D>("PoliceVehicle");
         _policeVehicleNavigation = _policeVehicle.GetNode<NavigationAgent3D>("NavigationAgent3D");
@@ -159,7 +159,7 @@ public sealed partial class StageFiveController : Node3D
         _counterattack.AttackersRequested += OnAttackersRequested;
         _defenseMission.Changed += OnDefenseMissionChanged;
         _workshop.Business.OwnerChanged += OnWorkshopOwnerChanged;
-        _playerWeapon.ShotResolved += OnPlayerShot;
+        _playerWeapons.ShotResolved += OnPlayerShot;
         _playerCombatant.Defeated += OnPlayerDefeated;
         _policeOfficer.Defeated += OnPoliceOfficerDefeated;
         _counterattacker.ObjectivePresenceChanged += OnCounterattackerObjectivePresenceChanged;
@@ -202,9 +202,9 @@ public sealed partial class StageFiveController : Node3D
             _workshop.Business.OwnerChanged -= OnWorkshopOwnerChanged;
         }
 
-        if (_playerWeapon is not null)
+        if (_playerWeapons is not null)
         {
-            _playerWeapon.ShotResolved -= OnPlayerShot;
+            _playerWeapons.ShotResolved -= OnPlayerShot;
         }
 
         if (_playerCombatant is not null)
