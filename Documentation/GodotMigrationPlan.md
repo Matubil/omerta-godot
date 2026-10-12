@@ -322,8 +322,8 @@ No deben entrar inicialmente conducción, tres negocios, policía completa, Igle
 ## Próximo paso concreto
 
 Las etapas base y los incrementos jugables posteriores ya están implementados en
-`omerta-godot`. El siguiente paso concreto es agregar daño e intercepción de vehículos:
-salud de motor/carrocería, consecuencias de choque, detención forzada por el patrullero y
-resolución por arresto, multa o escape a pie. Debe completarse este ciclo antes de sumar
-tráfico civil, más modelos de autos o una policía de mayor escala.
+`omerta-godot`. El siguiente paso concreto es reemplazar la cápsula graybox del
+protagonista por un personaje humano provisional riggeado y una máquina de animación que
+cubra locomoción, combate, cobertura, vault y vehículos. Esto debe validar escala,
+colocación de armas y transiciones antes de ampliar contenido o arte definitivo.
 

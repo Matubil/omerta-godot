@@ -56,3 +56,6 @@ Agregar **daño e intercepción de vehículos**: salud del motor y carrocería, 
 consecuencias, capacidad del patrullero para forzar una detención y una resolución clara
 por arresto, multa o huida a pie. Es el paso que convierte la persecución actual en un
 riesgo jugable completo antes de sumar tráfico civil o más modelos de autos.
+
+Este incremento fue implementado y está documentado en
+`Stage17VehicleDamageAndInterception.md`.

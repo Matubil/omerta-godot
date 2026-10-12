@@ -95,6 +95,7 @@ public sealed partial class AllyReinforcementController : Node
         if (_vehicle is not null)
         {
             _vehicle.SetDriveEnabled(false);
+            _vehicle.ResetCondition();
             _vehicle.GlobalPosition = RouteStart;
             _vehicle.Visible = false;
             if (_vehicleNavigation is not null)

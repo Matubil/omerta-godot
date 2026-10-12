@@ -57,6 +57,21 @@ public sealed partial class StageFiveController : Node3D
     public float PoliceVehicleStopRadius { get; set; } = 3.5f;
 
     [Export]
+    public float PoliceInterceptionDuration { get; set; } = 2.5f;
+
+    [Export]
+    public float PoliceInterceptionMaximumSpeed { get; set; } = 0.75f;
+
+    [Export]
+    public float PoliceRamInterval { get; set; } = 1.2f;
+
+    [Export]
+    public int PoliceRamDamage { get; set; } = 18;
+
+    [Export]
+    public int PoliceVehicleFineCost { get; set; } = 90;
+
+    [Export]
     public float CounterattackWarningDuration { get; set; } = 12.0f;
 
     [Export]
@@ -83,6 +98,7 @@ public sealed partial class StageFiveController : Node3D
     private PropertyTakeoverMission? _mission;
     private BusinessDefenseMission? _defenseMission;
     private PoliceResponseState? _police;
+    private VehicleInterceptionState? _vehicleInterception;
     private BusinessCounterattack? _counterattack;
     private WorkshopController? _workshop;
     private EconomyController? _economy;
@@ -101,6 +117,7 @@ public sealed partial class StageFiveController : Node3D
     private Vector3 _lastKnownPlayerPosition;
     private readonly List<DriveableVehicleController> _subscribedVehicles = new();
     private DriveableVehicleController? _pursuitVehicle;
+    private float _policeRamRemaining;
 
     public bool CanStartMission => _mission?.CanStart == true;
 
@@ -164,6 +181,9 @@ public sealed partial class StageFiveController : Node3D
 
         _mission = new PropertyTakeoverMission(_economy.Economy, MissionReward);
         _police = new PoliceResponseState(PoliceDispatchDelay, PoliceEscapeDuration);
+        _vehicleInterception = new VehicleInterceptionState(
+            PoliceInterceptionDuration,
+            PoliceInterceptionMaximumSpeed);
         _counterattack = new BusinessCounterattack(
             _workshop.Business,
             _workshop.Operations,
@@ -631,6 +651,8 @@ public sealed partial class StageFiveController : Node3D
         bool hasVisualContact = hasVehicle &&
             separation.LengthSquared() <=
             PoliceVehicleDetectionRadius * PoliceVehicleDetectionRadius;
+        bool withinInterceptionRange = hasVehicle &&
+            separation.LengthSquared() <= PoliceVehicleStopRadius * PoliceVehicleStopRadius;
         if (hasVehicle && _pursuitVehicle!.IsDriven)
         {
             _lastKnownPlayerPosition = target;
@@ -641,14 +663,83 @@ public sealed partial class StageFiveController : Node3D
             return;
         }
 
+        _policeRamRemaining = Mathf.Max(0.0f, _policeRamRemaining - deltaSeconds);
+        if (hasVehicle && withinInterceptionRange && _pursuitVehicle!.IsDriven)
+        {
+            if (_policeRamRemaining <= 0.0f &&
+                Mathf.Abs(_pursuitVehicle.CurrentSpeed) > PoliceInterceptionMaximumSpeed)
+            {
+                _policeRamRemaining = PoliceRamInterval;
+                _pursuitVehicle.ApplyPoliceRamDamage(PoliceRamDamage);
+            }
+
+            bool intercepted = _pursuitVehicle.IsDisabled ||
+                _vehicleInterception?.Advance(
+                    deltaSeconds,
+                    true,
+                    _pursuitVehicle.CurrentSpeed,
+                    _pursuitVehicle.IsDisabled) == true;
+            if (intercepted)
+            {
+                ResolveVehicleInterception();
+                return;
+            }
+        }
+        else
+        {
+            _vehicleInterception?.Reset();
+        }
+
+        if (hasVehicle && withinInterceptionRange && _pursuitVehicle!.IsDisabled)
+        {
+            ResolveVehicleInterception();
+            return;
+        }
+
         if (hasVehicle && !_pursuitVehicle!.IsDriven &&
-            separation.LengthSquared() <= PoliceVehicleStopRadius * PoliceVehicleStopRadius &&
+            withinInterceptionRange &&
             _police.ContinueSearchOnFoot())
         {
             _lastKnownPlayerPosition = _player?.GlobalPosition ?? target;
             _policeOfficer?.Activate(
                 _policeVehicle.GlobalPosition + Vector3.Left * 1.4f,
                 _lastKnownPlayerPosition);
+        }
+    }
+
+    private void ResolveVehicleInterception()
+    {
+        if (_police is null || _economy is null || _pursuitVehicle is null)
+        {
+            return;
+        }
+
+        _pursuitVehicle.ForceExitDriver();
+        PoliceInterceptionOutcome outcome = PoliceInterceptionRules.Evaluate(
+            _police.WantedLevel,
+            _economy.Economy.Balance,
+            PoliceVehicleFineCost);
+        if (outcome == PoliceInterceptionOutcome.Fine &&
+            _economy.Economy.TrySpendMoney(PoliceVehicleFineCost) &&
+            _police.ResolveByFine())
+        {
+            _hud?.ShowStatus(
+                $"Intercepción policial: multa de ${PoliceVehicleFineCost}. El vehículo conserva sus daños.",
+                6.0f);
+            return;
+        }
+
+        if (!_police.ResolveByArrest())
+        {
+            return;
+        }
+
+        _hud?.ShowStatus("Intercepción policial: quedaste arrestado.", 6.0f);
+        if (_playerCombatant?.IsDefeated == false)
+        {
+            _playerCombatant.ReceiveDamage(new DamageInfo(
+                _playerCombatant.Health.Current,
+                "police.arrest"));
         }
     }
 
@@ -704,6 +795,8 @@ public sealed partial class StageFiveController : Node3D
         _pursuitVehicle?.ClearPoliceMark();
         _pursuitVehicle = vehicle;
         _pursuitVehicle.MarkAsReportedStolen();
+        _vehicleInterception?.Reset();
+        _policeRamRemaining = 0.0f;
         _lastKnownPlayerPosition = vehicle.GlobalPosition;
         _police.ReportVehicleTheft(1);
         if (_police.Status == PoliceResponseStatus.Responding &&
@@ -770,11 +863,18 @@ public sealed partial class StageFiveController : Node3D
     private void OnPoliceChanged()
     {
         if (_police?.Status is PoliceResponseStatus.Resolved or
-            PoliceResponseStatus.Escaped or PoliceResponseStatus.Bribed)
+            PoliceResponseStatus.Escaped or PoliceResponseStatus.Bribed or
+            PoliceResponseStatus.Fined or PoliceResponseStatus.Arrested)
         {
             _pursuitVehicle?.ClearPoliceMark();
             _pursuitVehicle = null;
-            _mission?.MarkPoliceResponseResolved();
+            _vehicleInterception?.Reset();
+            _policeRamRemaining = 0.0f;
+            if (_police.Status != PoliceResponseStatus.Arrested)
+            {
+                _mission?.MarkPoliceResponseResolved();
+            }
+
             _policeOfficer?.Deactivate();
             if (_policeVehicle is not null)
             {
@@ -872,6 +972,8 @@ public sealed partial class StageFiveController : Node3D
     {
         _pursuitVehicle?.ClearPoliceMark();
         _pursuitVehicle = null;
+        _vehicleInterception?.Reset();
+        _policeRamRemaining = 0.0f;
         _police?.Reset();
         _counterattack?.AcknowledgeCurrentOwnership();
         _policeOfficer?.Deactivate();

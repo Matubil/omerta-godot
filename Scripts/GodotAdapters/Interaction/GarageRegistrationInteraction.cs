@@ -14,6 +14,9 @@ public sealed partial class GarageRegistrationInteraction : Area3D, IInteractabl
     public int RegistrationCost { get; set; } = 75;
 
     [Export]
+    public int RepairCost { get; set; } = 40;
+
+    [Export]
     public float RegistrationRadius { get; set; } = 7.0f;
 
     private WorkshopController? _workshop;
@@ -30,6 +33,12 @@ public sealed partial class GarageRegistrationInteraction : Area3D, IInteractabl
             if (!IsGarageAvailable)
             {
                 return "Garaje bloqueado · conquistá y repará El Faro";
+            }
+
+            DriveableVehicleController? repairCandidate = FindRepairCandidate();
+            if (repairCandidate is not null)
+            {
+                return $"Reparar {repairCandidate.DisplayName} (${RepairCost})";
             }
 
             DriveableVehicleController? candidate = FindRegistrationCandidate();
@@ -53,6 +62,24 @@ public sealed partial class GarageRegistrationInteraction : Area3D, IInteractabl
     public void Interact()
     {
         ResolveDependencies();
+        DriveableVehicleController? repairCandidate = FindRepairCandidate();
+        if (repairCandidate is not null)
+        {
+            if (_economy?.Economy.TrySpendMoney(RepairCost) == true)
+            {
+                repairCandidate.RepairToFull();
+                _hud?.ShowStatus(
+                    $"{repairCandidate.DisplayName} reparado por ${RepairCost}.",
+                    5.0f);
+            }
+            else
+            {
+                _hud?.ShowStatus($"Fondos insuficientes: la reparación cuesta ${RepairCost}.", 4.0f);
+            }
+
+            return;
+        }
+
         DriveableVehicleController? candidate = FindRegistrationCandidate();
         if (candidate is null)
         {
@@ -82,6 +109,11 @@ public sealed partial class GarageRegistrationInteraction : Area3D, IInteractabl
                 "Perdé a la policía antes de registrar ese vehículo.",
             _ => "Ese vehículo ya pertenece a la familia."
         };
+        if (result == VehicleRegistrationResult.Registered)
+        {
+            candidate.RepairToFull();
+        }
+
         _hud?.ShowStatus(message, 5.0f);
     }
 
@@ -93,6 +125,32 @@ public sealed partial class GarageRegistrationInteraction : Area3D, IInteractabl
         {
             if (node is not DriveableVehicleController vehicle || vehicle.IsFamilyOwned ||
                 vehicle.IsPoliceMarked || vehicle.IsDriven || !vehicle.Visible)
+            {
+                continue;
+            }
+
+            float distanceSquared = GlobalPosition.DistanceSquaredTo(vehicle.GlobalPosition);
+            if (distanceSquared > nearestDistanceSquared)
+            {
+                continue;
+            }
+
+            nearest = vehicle;
+            nearestDistanceSquared = distanceSquared;
+        }
+
+        return nearest;
+    }
+
+    public DriveableVehicleController? FindRepairCandidate()
+    {
+        DriveableVehicleController? nearest = null;
+        float nearestDistanceSquared = RegistrationRadius * RegistrationRadius;
+        foreach (Node node in GetTree().GetNodesInGroup("driveable_vehicle"))
+        {
+            if (node is not DriveableVehicleController vehicle || !vehicle.IsFamilyOwned ||
+                vehicle.IsPoliceMarked || vehicle.IsDriven || !vehicle.Visible ||
+                vehicle.CurrentCondition >= vehicle.MaximumVehicleCondition)
             {
                 continue;
             }

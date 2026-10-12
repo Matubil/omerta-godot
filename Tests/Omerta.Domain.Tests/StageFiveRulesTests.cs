@@ -95,6 +95,28 @@ public sealed class StageFiveRulesTests
     }
 
     [Test]
+    public void VehiclePursuitCanEndByFineOrArrest()
+    {
+        PoliceResponseState fined = new(3.0f, 8.0f);
+        fined.ReportVehicleTheft(1);
+        fined.AdvanceDispatch(3.0f);
+        fined.BeginVehiclePursuit();
+
+        Assert.That(fined.ResolveByFine(), Is.True);
+        Assert.That(fined.Status, Is.EqualTo(PoliceResponseStatus.Fined));
+        Assert.That(fined.WantedLevel, Is.Zero);
+
+        PoliceResponseState arrested = new(3.0f, 8.0f);
+        arrested.ReportVehicleTheft(1);
+        arrested.AdvanceDispatch(3.0f);
+        arrested.BeginVehiclePursuit();
+
+        Assert.That(arrested.ResolveByArrest(), Is.True);
+        Assert.That(arrested.Status, Is.EqualTo(PoliceResponseStatus.Arrested));
+        Assert.That(arrested.WantedLevel, Is.Zero);
+    }
+
+    [Test]
     public void BribeRequiresOneLowLevelWitnessAndEnoughMoney()
     {
         Assert.That(

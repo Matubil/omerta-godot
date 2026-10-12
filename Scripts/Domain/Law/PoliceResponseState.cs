@@ -11,7 +11,9 @@ public enum PoliceResponseStatus
     Responding,
     Resolved,
     Escaped,
-    Bribed
+    Bribed,
+    Fined,
+    Arrested
 }
 
 public enum PoliceIncidentType
@@ -215,6 +217,32 @@ public sealed class PoliceResponseState
         HasDefeatedOfficer = true;
         WantedLevel = 0;
         Status = PoliceResponseStatus.Resolved;
+        Changed?.Invoke();
+        return true;
+    }
+
+    public bool ResolveByFine()
+    {
+        if (Status != PoliceResponseStatus.PursuingVehicle)
+        {
+            return false;
+        }
+
+        WantedLevel = 0;
+        Status = PoliceResponseStatus.Fined;
+        Changed?.Invoke();
+        return true;
+    }
+
+    public bool ResolveByArrest()
+    {
+        if (Status != PoliceResponseStatus.PursuingVehicle)
+        {
+            return false;
+        }
+
+        WantedLevel = 0;
+        Status = PoliceResponseStatus.Arrested;
         Changed?.Invoke();
         return true;
     }

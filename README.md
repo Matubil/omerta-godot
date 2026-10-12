@@ -90,6 +90,10 @@ refuerzos utiliza la misma conducción una vez que termina su llegada y baja la 
 Si el testigo presencia el robo, el sedán queda marcado y el patrullero persigue su
 posición dinámica. Abandonarlo no cancela la búsqueda: la policía llega hasta el coche y
 continúa a pie. El garaje rechaza autos buscados hasta que se pierda o resuelva la alerta.
+Los choques dañan motor y conductor; el patrullero puede golpear el sedán y completar una
+intercepción si logra inutilizarlo o mantenerlo detenido. Una alerta baja se resuelve con
+una multa de $90 si hay fondos; de lo contrario termina en arresto y recuperación desde
+el último guardado. El Faro repara vehículos familiares dañados por $40.
 
 La partida manual se guarda como JSON versionado bajo `user://save_0.json`. Conserva
 pose, salud, munición, economía, propiedad y operatividad de los tres negocios, y
@@ -141,3 +145,6 @@ La conducción, propiedad de autos y el garaje de El Faro están detallados en
 
 El delito vehicular y la persecución dinámica están detallados en
 [`Documentation/Stage16VehicleCrimeAndPolicePursuit.md`](Documentation/Stage16VehicleCrimeAndPolicePursuit.md).
+
+El daño, las reparaciones y la intercepción policial están detallados en
+[`Documentation/Stage17VehicleDamageAndInterception.md`](Documentation/Stage17VehicleDamageAndInterception.md).

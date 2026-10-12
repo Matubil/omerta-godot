@@ -299,6 +299,11 @@ public sealed partial class PlaytestDiagnosticsController : Node
             Require(_stage!.EscapeVehiclePursuitForDiagnostics(),
                 "vehicle pursuit ends after losing police contact");
             Require(!_stolenVehicle.IsPoliceMarked, "escape clears police vehicle mark");
+            int conditionBeforeDamage = _stolenVehicle.CurrentCondition;
+            Require(_stolenVehicle.ApplyPoliceRamDamage(20) == 20,
+                "police impact damages vehicle condition");
+            Require(_stolenVehicle.CurrentCondition == conditionBeforeDamage - 20,
+                "vehicle condition tracks collision damage");
 
             _workshop!.RestorePersistentState(
                 WorkshopController.PlayerFactionId,
@@ -311,6 +316,9 @@ public sealed partial class PlaytestDiagnosticsController : Node
                 "garage detects parked stolen car");
             _vehicleGarage.Interact();
             Require(_stolenVehicle.IsFamilyOwned, "garage registers car as family owned");
+            Require(
+                _stolenVehicle.CurrentCondition == _stolenVehicle.MaximumVehicleCondition,
+                "garage registration repairs vehicle condition");
             Require(
                 _economy.Economy.Balance == balanceBefore - _vehicleGarage.RegistrationCost,
                 "garage charges registration exactly once");

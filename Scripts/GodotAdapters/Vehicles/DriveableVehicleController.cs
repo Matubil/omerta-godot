@@ -46,31 +46,51 @@ public sealed partial class DriveableVehicleController : CharacterBody3D
     [Export]
     public float SteeringDegreesPerSecond { get; set; } = 88.0f;
 
+    [Export]
+    public int MaximumCondition { get; set; } = 100;
+
+    [Export]
+    public float MinimumDamagingImpactSpeed { get; set; } = 4.0f;
+
+    [Export]
+    public float DamagePerImpactSpeed { get; set; } = 9.0f;
+
     private PlayerInputAdapter? _input;
     private HudController? _hud;
     private Label3D? _ownershipLabel;
     private MeshInstance3D? _body;
     private float _speed;
     private float _entryCooldown;
+    private float _impactCooldown;
     private bool _driveEnabled;
     private Vector3 _initialPosition;
     private Vector3 _initialRotation;
 
     public VehicleOwnership Ownership { get; private set; } = null!;
+    public VehicleCondition Condition { get; private set; } = null!;
     public PlayerController? Driver { get; private set; }
     public bool IsFamilyOwned => Ownership.IsFamilyOwned;
     public bool IsDriven => Driver is not null;
-    public bool CanEnterVehicle => Visible && _driveEnabled && Driver is null;
+    public bool CanEnterVehicle => Visible && _driveEnabled && Driver is null &&
+        !Condition.IsDisabled;
     public bool CanUseArsenal => Visible && _driveEnabled && Driver is null &&
         IsFamilyOwned && Mathf.Abs(_speed) < 0.2f;
     public bool IsPoliceMarked { get; private set; }
+    public bool IsDisabled => Condition.IsDisabled;
+    public int CurrentCondition => Condition.Current;
+    public int MaximumVehicleCondition => Condition.Maximum;
     public float CurrentSpeed => _speed;
 
     public override void _Ready()
     {
         AddToGroup("driveable_vehicle");
         Ownership = new VehicleOwnership(VehicleId, StartsFamilyOwned);
+        Condition = new VehicleCondition(
+            MaximumCondition,
+            MinimumDamagingImpactSpeed,
+            DamagePerImpactSpeed);
         Ownership.Changed += RefreshOwnershipPresentation;
+        Condition.Changed += OnConditionChanged;
         _ownershipLabel = GetNodeOrNull<Label3D>("OwnershipLabel");
         _body = GetNodeOrNull<MeshInstance3D>("Body");
         _input = GetTree().GetFirstNodeInGroup("player_input") as PlayerInputAdapter;
@@ -87,11 +107,17 @@ public sealed partial class DriveableVehicleController : CharacterBody3D
         {
             Ownership.Changed -= RefreshOwnershipPresentation;
         }
+
+        if (Condition is not null)
+        {
+            Condition.Changed -= OnConditionChanged;
+        }
     }
 
     public override void _PhysicsProcess(double delta)
     {
         _entryCooldown = Mathf.Max(0.0f, _entryCooldown - (float)delta);
+        _impactCooldown = Mathf.Max(0.0f, _impactCooldown - (float)delta);
         if (Driver is null)
         {
             Velocity = Vector3.Zero;
@@ -110,7 +136,10 @@ public sealed partial class DriveableVehicleController : CharacterBody3D
         float steering = _input?.Movement.X ?? 0.0f;
         AdvanceDriving(throttle, steering, (float)delta);
         Driver?.SynchronizeWithVehicle(GlobalPosition + Vector3.Up * 0.25f, Rotation.Y);
-        _hud?.SetMovementState(false, false, $"CONDUCIENDO · {Mathf.Abs(_speed):0.0} m/s");
+        _hud?.SetMovementState(
+            false,
+            false,
+            $"CONDUCIENDO · {Mathf.Abs(_speed):0.0} m/s · MOTOR {Condition.Ratio * 100.0f:0}%");
     }
 
     public bool TryEnterDriver(PlayerController player)
@@ -203,10 +232,43 @@ public sealed partial class DriveableVehicleController : CharacterBody3D
         RefreshOwnershipPresentation();
     }
 
+    public int ApplyPoliceRamDamage(int damage)
+    {
+        int applied = Condition.ApplyDamage(damage);
+        if (applied > 0)
+        {
+            _speed *= 0.45f;
+            DamageDriver(Math.Max(1, applied / 6), "vehicle.police-impact");
+            ShowDamageStatus("El patrullero golpeó el vehículo", applied);
+            HandleDisabledEngine();
+        }
+
+        return applied;
+    }
+
+    public bool RepairToFull()
+    {
+        bool repaired = Condition.RepairToFull();
+        if (repaired)
+        {
+            RefreshOwnershipPresentation();
+        }
+
+        return repaired;
+    }
+
+    public void ResetCondition()
+    {
+        Condition.RepairToFull();
+        _impactCooldown = 0.0f;
+        RefreshOwnershipPresentation();
+    }
+
     public void RestorePersistentState(Vector3 position, Quaternion rotation, bool familyOwned)
     {
         ForceExitDriver(false);
         ClearPoliceMark();
+        ResetCondition();
         Ownership.Restore(familyOwned);
         GlobalTransform = new Transform3D(new Basis(rotation.Normalized()), position);
         _speed = 0.0f;
@@ -217,6 +279,7 @@ public sealed partial class DriveableVehicleController : CharacterBody3D
     {
         ForceExitDriver(false);
         ClearPoliceMark();
+        ResetCondition();
         Ownership.Reset();
         GlobalPosition = _initialPosition;
         Rotation = _initialRotation;
@@ -247,9 +310,61 @@ public sealed partial class DriveableVehicleController : CharacterBody3D
             Mathf.DegToRad(-steering * SteeringDegreesPerSecond * steeringStrength *
                 reverseDirection * deltaSeconds));
         Vector3 forward = -GlobalBasis.Z;
-        Velocity = new Vector3(forward.X * _speed, -0.5f, forward.Z * _speed);
+        Vector3 intendedVelocity = new(forward.X * _speed, -0.5f, forward.Z * _speed);
+        Velocity = intendedVelocity;
         MoveAndSlide();
+        if (_impactCooldown <= 0.0f)
+        {
+            float strongestImpact = 0.0f;
+            for (int index = 0; index < GetSlideCollisionCount(); index++)
+            {
+                KinematicCollision3D collision = GetSlideCollision(index);
+                strongestImpact = Mathf.Max(
+                    strongestImpact,
+                    Mathf.Abs(intendedVelocity.Dot(collision.GetNormal())));
+            }
+
+            int damage = Condition.ApplyImpact(strongestImpact);
+            if (damage > 0)
+            {
+                _impactCooldown = 0.55f;
+                _speed *= 0.3f;
+                DamageDriver(Math.Max(1, damage / 4), "vehicle.collision");
+                ShowDamageStatus("Choque", damage);
+                HandleDisabledEngine();
+            }
+        }
     }
+
+    private void DamageDriver(int damage, string sourceId)
+    {
+        Driver?.GetNodeOrNull<Combatant>("Combatant")?.ReceiveDamage(
+            new Omerta.Domain.Combat.Damage.DamageInfo(damage, sourceId));
+    }
+
+    private void ShowDamageStatus(string cause, int damage)
+    {
+        _hud ??= GetTree().GetFirstNodeInGroup("hud") as HudController;
+        _hud?.ShowStatus(
+            $"{cause}: -{damage} vehículo · motor {Condition.Current}/{Condition.Maximum}",
+            4.0f);
+    }
+
+    private void HandleDisabledEngine()
+    {
+        if (!Condition.IsDisabled)
+        {
+            return;
+        }
+
+        _speed = 0.0f;
+        Velocity = Vector3.Zero;
+        ForceExitDriver();
+        _hud?.ShowStatus("Motor inutilizado. Tuviste que abandonar el vehículo.", 5.0f);
+    }
+
+    private void OnConditionChanged(int previous, int current) =>
+        RefreshOwnershipPresentation();
 
     private void RefreshOwnershipPresentation()
     {
@@ -264,11 +379,17 @@ public sealed partial class DriveableVehicleController : CharacterBody3D
 
         if (_ownershipLabel is not null)
         {
-            _ownershipLabel.Text = IsFamilyOwned
+            string ownershipText = IsFamilyOwned
                 ? $"{DisplayName.ToUpperInvariant()} · FAMILIA"
                 : IsPoliceMarked
                     ? $"{DisplayName.ToUpperInvariant()} · BUSCADO"
                     : $"{DisplayName.ToUpperInvariant()} · ROBADO";
+            string conditionText = Condition is null
+                ? string.Empty
+                : Condition.IsDisabled
+                    ? " · MOTOR INUTILIZADO"
+                    : $" · MOTOR {Condition.Ratio * 100.0f:0}%";
+            _ownershipLabel.Text = ownershipText + conditionText;
             _ownershipLabel.Modulate = IsFamilyOwned
                 ? new Color(0.48f, 0.95f, 0.62f)
                 : new Color(1.0f, 0.66f, 0.28f);
@@ -276,11 +397,17 @@ public sealed partial class DriveableVehicleController : CharacterBody3D
 
         if (_body is not null)
         {
+            Color ownershipColor = IsFamilyOwned
+                ? new Color(0.1f, 0.32f, 0.17f)
+                : new Color(0.42f, 0.16f, 0.12f);
+            float damageDarkening = Condition is null
+                ? 0.0f
+                : (1.0f - Condition.Ratio) * 0.65f;
             _body.MaterialOverride = new StandardMaterial3D
             {
-                AlbedoColor = IsFamilyOwned
-                    ? new Color(0.1f, 0.32f, 0.17f)
-                    : new Color(0.42f, 0.16f, 0.12f),
+                AlbedoColor = ownershipColor.Lerp(
+                    new Color(0.04f, 0.04f, 0.04f),
+                    damageDarkening),
                 Metallic = 0.35f,
                 Roughness = 0.52f
             };
