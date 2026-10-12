@@ -14,6 +14,7 @@ public sealed partial class HudController : CanvasLayer
     private Label? _aimLabel;
     private Label? _economyLabel;
     private Label? _businessLabel;
+    private Label? _territoryLabel;
     private Label? _missionLabel;
     private Label? _squadLabel;
     private Label? _policeLabel;
@@ -33,6 +34,7 @@ public sealed partial class HudController : CanvasLayer
         _aimLabel = GetNode<Label>("AimState");
         _economyLabel = GetNode<Label>("Economy");
         _businessLabel = GetNode<Label>("BusinessState");
+        _territoryLabel = GetNode<Label>("TerritoryState");
         _missionLabel = GetNode<Label>("MissionState");
         _squadLabel = GetNode<Label>("SquadState");
         _policeLabel = GetNode<Label>("PoliceState");
@@ -133,6 +135,21 @@ public sealed partial class HudController : CanvasLayer
         {
             _businessLabel.Text =
                 $"{displayName.ToUpperInvariant()}\nDUEÑO: {owner} · {operation}\nPRESIÓN: {pressure}/{resistance}";
+        }
+    }
+
+    public void SetTerritory(
+        string displayName,
+        string controller,
+        int controlledBusinesses,
+        int totalBusinesses,
+        int requiredBusinesses)
+    {
+        if (_territoryLabel is not null)
+        {
+            _territoryLabel.Text =
+                $"{displayName.ToUpperInvariant()} · CONTROL: {controller}\n" +
+                $"NEGOCIOS: {controlledBusinesses}/{totalBusinesses} · MAYORÍA: {requiredBusinesses}";
         }
     }
 

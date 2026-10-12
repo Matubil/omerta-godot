@@ -18,11 +18,12 @@
 | Área | Datos guardados |
 | --- | --- |
 | Protagonista | Posición, rotación y salud |
-| Combate | Salud del rival y del comerciante |
+| Combate | Salud del rival y de los comerciantes de El Faro y San Telmo |
 | Arma | Munición del cargador y reserva |
 | Economía | Saldo actual |
 | Taller El Faro | Propietario y estado del punto operativo |
 | Bar La Niebla | Propietario y estado del punto operativo |
+| Depósito San Telmo | Propietario y estado del punto operativo |
 | Misiones | Fase y recompensa de El Faro y La Niebla |
 
 El estado disponible del comerciante se deriva de su salud al cargar. La posibilidad de
@@ -50,7 +51,7 @@ mismo hecho dos veces.
 ## Validación
 
 - Compilación de juego y tests sin errores ni advertencias.
-- 16 tests NUnit aprobados.
+- 34 tests NUnit aprobados en el estado actual del proyecto.
 - Round trip JSON y rechazo explícito de versiones incompatibles.
 - Reemplazo atómico de archivo y limpieza del temporal.
 - Prueba integrada headless: guardar, alterar dinero, pose, salud, munición y negocio,
@@ -59,7 +60,8 @@ mismo hecho dos veces.
 
 ## Ampliación posterior
 
-El formato actual es versión 3 e incluye Bar La Niebla y la misión encadenada de
-sabotaje. Las partidas de versión 1 y 2 se migran conservando sus datos existentes; la
-ausencia del segundo negocio se interpreta como su estado inicial, sin inventar avance
-ni recompensas.
+El formato actual es versión 4 e incluye Bar La Niebla, Depósito San Telmo y la misión
+encadenada de sabotaje. Las partidas de versión 1, 2 y 3 se migran conservando sus datos
+existentes; la ausencia de un negocio incorporado después se interpreta como su estado
+inicial, sin inventar avance ni recompensas. El controlador de South District se deriva
+de los propietarios de sus tres negocios y por eso no se serializa por separado.

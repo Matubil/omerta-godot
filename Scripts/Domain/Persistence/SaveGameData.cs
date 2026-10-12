@@ -4,7 +4,7 @@ namespace Omerta.Domain.Persistence;
 
 public sealed class SaveGameData
 {
-    public const int CurrentVersion = 3;
+    public const int CurrentVersion = 4;
 
     public int Version { get; set; } = CurrentVersion;
 

@@ -132,6 +132,20 @@ theme_override_font_sizes/font_size = 15
 text = "TALLER EL FARO\nDUEÑO: CÍRCULO FERRO · OPERATIVO\nPRESIÓN: 0/100"
 horizontal_alignment = 2
 
+[node name="TerritoryState" type="Label" parent="."]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -450.0
+offset_top = 322.0
+offset_right = -22.0
+offset_bottom = 374.0
+grow_horizontal = 0
+theme_override_colors/font_color = Color(0.58, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 15
+text = "SOUTH DISTRICT · CONTROL: CÍRCULO FERRO\nNEGOCIOS: 0/3 · MAYORÍA: 2"
+horizontal_alignment = 2
+
 [node name="EnemyState" type="Label" parent="."]
 anchors_preset = 1
 anchor_left = 1.0

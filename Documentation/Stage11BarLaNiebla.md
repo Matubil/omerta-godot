@@ -57,3 +57,6 @@ Agregar **Depósito San Telmo y control territorial por mayoría de negocios**. 
 tercer negocio permitirá reemplazar adaptadores demasiado específicos por una
 composición reutilizable y calcular el control de South District como estado derivado:
 dos de tres negocios controlados, sin duplicarlo en el archivo de guardado.
+
+Este incremento quedó completado y está documentado en
+`Documentation/Stage12TerritoryControl.md`.

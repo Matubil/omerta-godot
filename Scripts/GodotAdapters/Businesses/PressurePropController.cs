@@ -9,14 +9,14 @@ public sealed partial class PressurePropController : StaticBody3D
     private Combatant? _combatant;
     private CollisionShape3D? _collision;
     private Node3D? _visual;
-    private WorkshopController? _workshop;
+    private IBusinessPressureHost? _host;
 
     public override void _Ready()
     {
         _combatant = GetNode<Combatant>("Combatant");
         _collision = GetNode<CollisionShape3D>("Collision");
         _visual = GetNode<Node3D>("Visual");
-        _workshop = FindWorkshop();
+        _host = FindHost();
         _combatant.Defeated += OnDefeated;
     }
 
@@ -59,18 +59,18 @@ public sealed partial class PressurePropController : StaticBody3D
             _visual.Scale = new Vector3(1.0f, 0.2f, 1.0f);
         }
 
-        _workshop ??= FindWorkshop();
-        _workshop?.NotifyPressurePropBroken();
+        _host ??= FindHost();
+        _host?.NotifyPressurePropBroken();
     }
 
-    private WorkshopController? FindWorkshop()
+    private IBusinessPressureHost? FindHost()
     {
         Node? current = GetParent();
-        while (current is not null && current is not WorkshopController)
+        while (current is not null && current is not IBusinessPressureHost)
         {
             current = current.GetParent();
         }
 
-        return current as WorkshopController;
+        return current as IBusinessPressureHost;
     }
 }

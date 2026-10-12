@@ -10,6 +10,7 @@ using Omerta.GodotAdapters.Economy;
 using Omerta.GodotAdapters.Missions;
 using Omerta.GodotAdapters.Navigation;
 using Omerta.GodotAdapters.StageFive;
+using Omerta.GodotAdapters.Territories;
 using Omerta.Presentation;
 
 namespace Omerta.GodotAdapters.Diagnostics;
@@ -24,6 +25,8 @@ public sealed partial class PlaytestDiagnosticsController : Node
     private StageFiveController? _stage;
     private WorkshopController? _workshop;
     private BarLaNieblaController? _bar;
+    private DepotSanTelmoController? _depot;
+    private TerritoryController? _territory;
     private SabotageMissionController? _sabotageMission;
     private EconomyController? _economy;
     private HitscanWeaponController? _weapon;
@@ -35,6 +38,7 @@ public sealed partial class PlaytestDiagnosticsController : Node
     private bool _runCameraSmokeTest;
     private bool _runTraversalSmokeTest;
     private bool _runBarSabotageSmokeTest;
+    private bool _runTerritorySmokeTest;
     private int _barSabotageSmokeStage;
     private int _barSabotageWaitFrames = 120;
     private int _barBalanceBeforeSabotage;
@@ -87,6 +91,11 @@ public sealed partial class PlaytestDiagnosticsController : Node
                 _runBarSabotageSmokeTest = true;
                 _smokeFramesRemaining = 120;
             }
+            else if (argument == "--territory-smoke")
+            {
+                _runTerritorySmokeTest = true;
+                _smokeFramesRemaining = 120;
+            }
         }
     }
 
@@ -132,6 +141,11 @@ public sealed partial class PlaytestDiagnosticsController : Node
         {
             AdvanceBarSabotageSmokeTest();
         }
+        else if (_runTerritorySmokeTest && --_smokeFramesRemaining <= 0)
+        {
+            _runTerritorySmokeTest = false;
+            RunTerritorySmokeTest();
+        }
     }
 
     private void ResolveDependencies()
@@ -142,6 +156,8 @@ public sealed partial class PlaytestDiagnosticsController : Node
         _stage ??= GetTree().GetFirstNodeInGroup("stage_five") as StageFiveController;
         _workshop ??= GetTree().GetFirstNodeInGroup("workshop") as WorkshopController;
         _bar ??= GetTree().GetFirstNodeInGroup("la_niebla") as BarLaNieblaController;
+        _depot ??= GetTree().GetFirstNodeInGroup("san_telmo") as DepotSanTelmoController;
+        _territory ??= GetTree().GetFirstNodeInGroup("territory") as TerritoryController;
         _sabotageMission ??= GetTree().GetFirstNodeInGroup("sabotage_mission") as SabotageMissionController;
         _economy ??= GetTree().GetFirstNodeInGroup("economy") as EconomyController;
         _weapon ??= _player?.GetNodeOrNull<HitscanWeaponController>("WeaponController");
@@ -177,6 +193,8 @@ public sealed partial class PlaytestDiagnosticsController : Node
             Require(_stage?.HasRequiredRuntimeActors == true, "stage 5 runtime actors");
             Require(_workshop?.Business is not null, "El Faro business");
             Require(_bar?.Business is not null, "Bar La Niebla business");
+            Require(_depot?.Business is not null, "Depósito San Telmo business");
+            Require(_territory?.State is not null, "South District territory");
             Require(_sabotageMission is not null, "La Niebla sabotage mission");
             Require(_weapon?.Runtime is not null, "player weapon");
             Require(GetTree().GetNodesInGroup("companion").Count == 1, "one initial companion");
@@ -403,8 +421,8 @@ public sealed partial class PlaytestDiagnosticsController : Node
             Require(_camera is not null, "isometric camera controller");
             Require(_workshop is not null, "workshop for roof fade validation");
             Require(
-                GetTree().GetNodesInGroup("camera_fade_occluder").Count == 6,
-                "two building and four business roof fade occluders");
+                GetTree().GetNodesInGroup("camera_fade_occluder").Count == 8,
+                "two building and six business roof fade occluders");
             Require(_camera!.FadedGeometryCount >= 1, "runtime roof fade selection");
             MeshInstance3D interiorRoof = _workshop!.GetNode<MeshInstance3D>(
                 "Interior/Roof/Mesh");
@@ -620,6 +638,71 @@ public sealed partial class PlaytestDiagnosticsController : Node
             _runBarSabotageSmokeTest = false;
             GD.PushError($"Bar sabotage smoke failed: {exception}");
             GetTree().Quit(1);
+        }
+    }
+
+    private void RunTerritorySmokeTest()
+    {
+        int exitCode = 1;
+        try
+        {
+            ResolveDependencies();
+            Require(_workshop is not null, "El Faro business");
+            Require(_bar is not null, "La Niebla business");
+            Require(_depot is not null, "San Telmo business");
+            Require(_territory?.State is not null, "South District territory");
+
+            _workshop!.ResetBusinessEncounter();
+            _bar!.ResetBusinessEncounter();
+            _depot!.ResetBusinessEncounter();
+            string rivalFaction = _workshop.Definition.InitialOwnerId;
+            Require(_territory!.State.Businesses.Count == 3, "three territory businesses");
+            Require(_territory.State.RequiredBusinessCount == 2, "two-business majority");
+            Require(_territory.State.ControllerId == rivalFaction, "initial rival control");
+            Require(_territory.State.CountControlledBy(rivalFaction) == 3, "three rival businesses");
+
+            for (int interaction = 0; interaction < 4; interaction++)
+            {
+                _workshop.InteractWithMerchant();
+            }
+
+            Require(
+                _workshop.Business.OwnerId == WorkshopController.PlayerFactionId,
+                "El Faro captured by direct pressure");
+            Require(
+                _territory.State.ControllerId == rivalFaction,
+                "one business does not transfer territory");
+
+            for (int interaction = 0; interaction < 4; interaction++)
+            {
+                _depot.InteractWithMerchant();
+            }
+
+            Require(
+                _depot.Business.OwnerId == WorkshopController.PlayerFactionId,
+                "San Telmo captured by direct pressure");
+            Require(
+                _territory.State.ControllerId == WorkshopController.PlayerFactionId,
+                "second business transfers territory");
+            Require(
+                _territory.State.CountControlledBy(WorkshopController.PlayerFactionId) == 2,
+                "player controls exact majority");
+            Require(
+                _bar.Business.OwnerId == rivalFaction,
+                "La Niebla ownership remains independent");
+
+            GD.Print(
+                "Territory smoke passed: three businesses, 2-of-3 majority, sequential " +
+                "capture and independent La Niebla ownership verified.");
+            exitCode = 0;
+        }
+        catch (Exception exception)
+        {
+            GD.PushError($"Territory smoke failed: {exception}");
+        }
+        finally
+        {
+            GetTree().Quit(exitCode);
         }
     }
 

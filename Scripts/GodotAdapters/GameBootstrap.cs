@@ -9,6 +9,7 @@ using Omerta.GodotAdapters.Economy;
 using Omerta.GodotAdapters.Persistence;
 using Omerta.GodotAdapters.Missions;
 using Omerta.GodotAdapters.StageFive;
+using Omerta.GodotAdapters.Territories;
 using Omerta.Presentation;
 
 namespace Omerta.GodotAdapters;
@@ -24,6 +25,8 @@ public sealed partial class GameBootstrap : Node3D
     private HudController? _hud;
     private WorkshopController? _workshop;
     private BarLaNieblaController? _bar;
+    private DepotSanTelmoController? _depot;
+    private TerritoryController? _territory;
     private EconomyController? _economy;
     private PersistenceController? _persistence;
     private StageFiveController? _stageFive;
@@ -37,12 +40,14 @@ public sealed partial class GameBootstrap : Node3D
     {
         GD.Print(
             $"{GameIdentity.CommercialName} [{GameIdentity.TechnicalName}] — " +
-            "Etapas 0 a 6 + navegación, traversal y Bar La Niebla");
+            "Etapas 0 a 6 + navegación, traversal y control territorial");
         _player = GetTree().GetFirstNodeInGroup("player") as PlayerController;
         _rival = GetTree().GetFirstNodeInGroup("rival") as RivalController;
         _hud = GetTree().GetFirstNodeInGroup("hud") as HudController;
         _workshop = GetTree().GetFirstNodeInGroup("workshop") as WorkshopController;
         _bar = GetTree().GetFirstNodeInGroup("la_niebla") as BarLaNieblaController;
+        _depot = GetTree().GetFirstNodeInGroup("san_telmo") as DepotSanTelmoController;
+        _territory = GetTree().GetFirstNodeInGroup("territory") as TerritoryController;
         _economy = GetTree().GetFirstNodeInGroup("economy") as EconomyController;
         _persistence = GetTree().GetFirstNodeInGroup("persistence") as PersistenceController;
         _stageFive = GetTree().GetFirstNodeInGroup("stage_five") as StageFiveController;
@@ -66,7 +71,8 @@ public sealed partial class GameBootstrap : Node3D
             "peatones activos aplican evitamiento local.");
         GD.Print("Cámara activa: brazo con colisión y oclusores visuales atenuables.");
         GD.Print("Traversal activo: vault contextual y cobertura alta/baja.");
-        GD.Print("Contenido activo: segundo negocio y misión encadenada de sabotaje.");
+        GD.Print("Contenido activo: tres negocios y misión encadenada de sabotaje.");
+        GD.Print("Territorio activo: tres negocios y control de South District por mayoría 2 de 3.");
     }
 
     public override void _Process(double delta)
@@ -97,6 +103,7 @@ public sealed partial class GameBootstrap : Node3D
         _rival.ResetCombat(_rivalSpawn, _rivalRotation);
         _workshop?.ResetBusinessEncounter();
         _bar?.ResetBusinessEncounter();
+        _depot?.ResetBusinessEncounter();
         _economy?.ResetEconomy();
         _stageFive?.ResetStageFiveEncounter();
         _sabotageMission?.ResetEncounter();

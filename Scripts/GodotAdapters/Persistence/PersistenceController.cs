@@ -33,6 +33,7 @@ public sealed partial class PersistenceController : Node
     private Combatant? _rivalCombatant;
     private WorkshopController? _workshop;
     private BarLaNieblaController? _bar;
+    private DepotSanTelmoController? _depot;
     private EconomyController? _economy;
     private HudController? _hud;
     private StageFiveController? _stageFive;
@@ -52,15 +53,17 @@ public sealed partial class PersistenceController : Node
         _rival = GetTree().GetFirstNodeInGroup("rival") as RivalController;
         _workshop = GetTree().GetFirstNodeInGroup("workshop") as WorkshopController;
         _bar = GetTree().GetFirstNodeInGroup("la_niebla") as BarLaNieblaController;
+        _depot = GetTree().GetFirstNodeInGroup("san_telmo") as DepotSanTelmoController;
         _economy = GetTree().GetFirstNodeInGroup("economy") as EconomyController;
         _hud = GetTree().GetFirstNodeInGroup("hud") as HudController;
         _stageFive = GetTree().GetFirstNodeInGroup("stage_five") as StageFiveController;
         _sabotageMission = GetTree().GetFirstNodeInGroup("sabotage_mission") as SabotageMissionController;
         if (_player is null || _rival is null || _workshop is null || _bar is null ||
+            _depot is null ||
             _economy is null || _stageFive is null || _sabotageMission is null)
         {
             GD.PushError(
-                "Persistence requires player, rival, both businesses, economy and mission nodes.");
+                "Persistence requires player, rival, all three businesses, economy and mission nodes.");
             SetProcess(false);
             return;
         }
@@ -138,12 +141,23 @@ public sealed partial class PersistenceController : Node
             OwnerFactionId = _bar.Business.OwnerId,
             IsCriticalAssetOperational = _bar.Operations.IsCriticalAssetOperational
         });
+        data.Businesses.Add(new BusinessSaveData
+        {
+            BusinessId = _depot!.Business.Id,
+            OwnerFactionId = _depot.Business.OwnerId,
+            IsCriticalAssetOperational = _depot.Operations.IsCriticalAssetOperational
+        });
         data.CharacterCombatStates.Add(CreateCombatState(_playerCombatant!));
         data.CharacterCombatStates.Add(CreateCombatState(_rivalCombatant!));
         data.CharacterCombatStates.Add(new CharacterCombatSaveData
         {
             CharacterId = "character.rafael-merchant",
             CurrentHealth = _workshop.MerchantHealth
+        });
+        data.CharacterCombatStates.Add(new CharacterCombatSaveData
+        {
+            CharacterId = "character.merchant.san-telmo",
+            CurrentHealth = _depot.MerchantHealth
         });
         data.PlayerWeapons.Weapons.Add(new WeaponSaveData
         {
@@ -172,6 +186,10 @@ public sealed partial class PersistenceController : Node
         _bar!.RestorePersistentState(
             restore.BarBusiness?.OwnerFactionId ?? _bar.Definition.InitialOwnerId,
             restore.BarBusiness?.IsCriticalAssetOperational ?? true);
+        _depot!.RestorePersistentState(
+            restore.DepotBusiness?.OwnerFactionId ?? _depot.Definition.InitialOwnerId,
+            restore.DepotBusiness?.IsCriticalAssetOperational ?? true,
+            restore.DepotMerchantHealth);
         _playerCombat!.RestoreCombat(
             restore.PlayerHealth,
             restore.Weapon.MagazineAmmo,
@@ -279,6 +297,10 @@ public sealed partial class PersistenceController : Node
             _bar!.RestorePersistentState(
                 _bar.Definition.InitialOwnerId,
                 false);
+            _depot!.RestorePersistentState(
+                WorkshopController.PlayerFactionId,
+                false,
+                30);
             if (!LoadNow())
             {
                 throw new InvalidOperationException("The smoke load operation failed.");
@@ -335,8 +357,8 @@ public sealed partial class PersistenceController : Node
             }
 
             GD.Print(
-                "Persistence smoke passed: base state and completed La Niebla sabotage " +
-                "save/mutation/exact restore verified.");
+                "Persistence smoke passed: three businesses, merchant health and completed " +
+                "La Niebla sabotage save/mutation/exact restore verified.");
             exitCode = 0;
         }
         catch (Exception exception)
@@ -391,10 +413,21 @@ public sealed partial class PersistenceController : Node
                 $"Unknown La Niebla owner '{barBusiness.OwnerFactionId}'.");
         }
 
+        BusinessSaveData? depotBusiness = FindOptionalBusiness(data, _depot!.Business.Id);
+        if (depotBusiness is not null &&
+            depotBusiness.OwnerFactionId != WorkshopController.PlayerFactionId &&
+            depotBusiness.OwnerFactionId != _depot.Definition.InitialOwnerId)
+        {
+            throw new InvalidDataException(
+                $"Unknown San Telmo owner '{depotBusiness.OwnerFactionId}'.");
+        }
+
         int playerHealth = FindHealth(data, _playerCombatant!);
         int rivalHealth = FindHealth(data, _rivalCombatant!);
         Combatant merchant = _workshop.GetNode<Combatant>("Interior/Merchant/Combatant");
         int merchantHealth = FindHealth(data, merchant);
+        Combatant depotMerchant = _depot.GetNode<Combatant>("Interior/Merchant/Combatant");
+        int depotMerchantHealth = FindOptionalHealth(data, depotMerchant);
         WeaponSaveData weapon = FindWeapon(data, _playerWeapon!.Runtime.Specification.Id);
         MissionProgressSaveData? mission = _stageFive!.ValidateMissionProgress(data.Missions);
         MissionProgressSaveData? sabotageMission = _sabotageMission!.ValidateMissionProgress(
@@ -424,9 +457,11 @@ public sealed partial class PersistenceController : Node
         return new ValidatedRestore(
             business,
             barBusiness,
+            depotBusiness,
             playerHealth,
             rivalHealth,
             merchantHealth,
+            depotMerchantHealth,
             weapon,
             mission,
             sabotageMission,
@@ -515,6 +550,39 @@ public sealed partial class PersistenceController : Node
         return match.CurrentHealth;
     }
 
+    private static int FindOptionalHealth(SaveGameData data, Combatant combatant)
+    {
+        CharacterCombatSaveData? match = null;
+        foreach (CharacterCombatSaveData state in data.CharacterCombatStates)
+        {
+            if (state.CharacterId != combatant.CombatantId)
+            {
+                continue;
+            }
+
+            if (match is not null)
+            {
+                throw new InvalidDataException(
+                    $"Character '{combatant.CombatantId}' is duplicated in the save.");
+            }
+
+            match = state;
+        }
+
+        if (match is null)
+        {
+            return combatant.Health.Maximum;
+        }
+
+        if (match.CurrentHealth < 0 || match.CurrentHealth > combatant.Health.Maximum)
+        {
+            throw new InvalidDataException(
+                $"Health for '{combatant.CombatantId}' is outside the valid range.");
+        }
+
+        return match.CurrentHealth;
+    }
+
     private static WeaponSaveData FindWeapon(SaveGameData data, string weaponId)
     {
         WeaponSaveData? match = null;
@@ -541,7 +609,7 @@ public sealed partial class PersistenceController : Node
         if (_storage is null || _player is null || _playerCombat is null ||
             _playerCombatant is null || _playerWeapon is null || _rival is null ||
             _rivalCombatant is null || _workshop is null || _economy is null ||
-            _bar is null || _stageFive is null || _sabotageMission is null)
+            _bar is null || _depot is null || _stageFive is null || _sabotageMission is null)
         {
             throw new InvalidOperationException("Persistence has not been initialized.");
         }
@@ -556,9 +624,11 @@ public sealed partial class PersistenceController : Node
     private sealed record ValidatedRestore(
         BusinessSaveData Business,
         BusinessSaveData? BarBusiness,
+        BusinessSaveData? DepotBusiness,
         int PlayerHealth,
         int RivalHealth,
         int MerchantHealth,
+        int DepotMerchantHealth,
         WeaponSaveData Weapon,
         MissionProgressSaveData? Mission,
         MissionProgressSaveData? SabotageMission,

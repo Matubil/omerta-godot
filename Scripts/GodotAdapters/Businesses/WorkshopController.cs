@@ -6,7 +6,10 @@ using Omerta.Presentation;
 
 namespace Omerta.GodotAdapters.Businesses;
 
-public sealed partial class WorkshopController : Node3D, IBusinessOperationsHost
+public sealed partial class WorkshopController : Node3D,
+    IBusinessOperationsHost,
+    IBusinessMerchantHost,
+    IBusinessPressureHost
 {
     public const string PlayerFactionId = "faction.player-family";
 

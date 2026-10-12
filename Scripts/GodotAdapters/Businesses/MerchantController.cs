@@ -8,13 +8,13 @@ public sealed partial class MerchantController : StaticBody3D
 {
     private Combatant? _combatant;
     private Node3D? _visual;
-    private WorkshopController? _workshop;
+    private IBusinessMerchantHost? _host;
 
     public override void _Ready()
     {
         _combatant = GetNode<Combatant>("Combatant");
         _visual = GetNode<Node3D>("Visual");
-        _workshop = FindWorkshop();
+        _host = FindHost();
         _combatant.Defeated += OnDefeated;
     }
 
@@ -34,7 +34,7 @@ public sealed partial class MerchantController : StaticBody3D
             _visual.Rotation = Vector3.Zero;
         }
 
-        _workshop ??= FindWorkshop();
+        _host ??= FindHost();
     }
 
     public int CurrentHealth => _combatant?.Health.Current ?? 0;
@@ -57,18 +57,18 @@ public sealed partial class MerchantController : StaticBody3D
             _visual.Rotation = new Vector3(0.0f, 0.0f, Mathf.Pi * 0.5f);
         }
 
-        _workshop ??= FindWorkshop();
-        _workshop?.NotifyMerchantAvailability(false);
+        _host ??= FindHost();
+        _host?.NotifyMerchantAvailability(false);
     }
 
-    private WorkshopController? FindWorkshop()
+    private IBusinessMerchantHost? FindHost()
     {
         Node? current = GetParent();
-        while (current is not null && current is not WorkshopController)
+        while (current is not null && current is not IBusinessMerchantHost)
         {
             current = current.GetParent();
         }
 
-        return current as WorkshopController;
+        return current as IBusinessMerchantHost;
     }
 }

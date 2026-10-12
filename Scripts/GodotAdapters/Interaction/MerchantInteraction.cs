@@ -6,28 +6,28 @@ namespace Omerta.GodotAdapters.Interaction;
 
 public sealed partial class MerchantInteraction : Area3D, IInteractable
 {
-    private WorkshopController? _workshop;
+    private IBusinessMerchantHost? _host;
 
-    public bool CanInteract => ResolveWorkshop()?.CanInteractWithMerchant == true;
+    public bool CanInteract => ResolveHost()?.CanInteractWithMerchant == true;
 
-    public string InteractionPrompt => ResolveWorkshop()?.MerchantPrompt ?? string.Empty;
+    public string InteractionPrompt => ResolveHost()?.MerchantPrompt ?? string.Empty;
 
-    public void Interact() => ResolveWorkshop()?.InteractWithMerchant();
+    public void Interact() => ResolveHost()?.InteractWithMerchant();
 
-    private WorkshopController? ResolveWorkshop()
+    private IBusinessMerchantHost? ResolveHost()
     {
-        if (_workshop is not null)
+        if (_host is not null)
         {
-            return _workshop;
+            return _host;
         }
 
         Node? current = GetParent();
-        while (current is not null && current is not WorkshopController)
+        while (current is not null && current is not IBusinessMerchantHost)
         {
             current = current.GetParent();
         }
 
-        _workshop = current as WorkshopController;
-        return _workshop;
+        _host = current as IBusinessMerchantHost;
+        return _host;
     }
 }

@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=3]
+[gd_scene load_steps=22 format=3]
 
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/GameBootstrap.cs" id="1_bootstrap"]
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/Input/PlayerInputAdapter.cs" id="2_input"]
@@ -16,6 +16,8 @@
 [ext_resource type="PackedScene" path="res://Scenes/World/SharedNavigationWorld.tscn" id="14_navigation"]
 [ext_resource type="PackedScene" path="res://Scenes/Businesses/BarLaNiebla.tscn" id="15_bar"]
 [ext_resource type="PackedScene" path="res://Scenes/Gameplay/SabotageMission.tscn" id="16_sabotage"]
+[ext_resource type="PackedScene" path="res://Scenes/Businesses/DepotSanTelmo.tscn" id="17_depot"]
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/Territories/TerritoryController.cs" id="18_territory"]
 
 [sub_resource type="Environment" id="Environment_main"]
 background_mode = 1
@@ -63,6 +65,11 @@ StartingMoney = 100
 [node name="Workshop" parent="." instance=ExtResource("5_workshop")]
 
 [node name="BarLaNiebla" parent="." instance=ExtResource("15_bar")]
+
+[node name="DepotSanTelmo" parent="." instance=ExtResource("17_depot")]
+
+[node name="SouthDistrictTerritory" type="Node" parent="." groups=["territory"]]
+script = ExtResource("18_territory")
 
 [node name="Player" parent="." instance=ExtResource("6_player")]
 position = Vector3(0, 0.05, 4)

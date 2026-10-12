@@ -43,7 +43,7 @@ public sealed class SaveGameSerializer
             data.Missions = new();
             data.Version = SaveGameData.CurrentVersion;
         }
-        else if (data.Version == 2)
+        else if (data.Version is 2 or 3)
         {
             data.Version = SaveGameData.CurrentVersion;
         }
