@@ -54,6 +54,8 @@ public sealed partial class PlayerController : CharacterBody3D
 
     public bool IsCrouched => _isCrouched;
 
+    public bool IsAiming => _isAiming;
+
     public bool IsTraversing => _traversal?.IsVaulting == true;
 
     public bool IsInCover => _cover?.IsInCover == true;

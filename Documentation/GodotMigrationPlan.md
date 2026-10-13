@@ -322,8 +322,10 @@ No deben entrar inicialmente conducción, tres negocios, policía completa, Igle
 ## Próximo paso concreto
 
 Las etapas base y los incrementos jugables posteriores ya están implementados en
-`omerta-godot`. El siguiente paso concreto es reemplazar la cápsula graybox del
-protagonista por un personaje humano provisional riggeado y una máquina de animación que
-cubra locomoción, combate, cobertura, vault y vehículos. Esto debe validar escala,
-colocación de armas y transiciones antes de ampliar contenido o arte definitivo.
+`omerta-godot`, incluida la sustitución de la cápsula graybox por un humanoide articulado
+provisional con estados visuales para locomoción, combate, cobertura y vault. El siguiente
+paso concreto es incorporar una malla humana riggeada con `Skeleton3D`, retargetear clips
+de locomoción y acciones, y fijar puntos de montaje para manos, pistolera, espalda y
+asientos. La transición debe conservar la capa de estados actual y resolver primero
+escala, colocación de armas y entrada/salida de vehículos antes de ampliar contenido.
 

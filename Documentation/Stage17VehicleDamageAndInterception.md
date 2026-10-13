@@ -49,12 +49,13 @@ bloqueado hasta resolver la búsqueda.
   del tiempo de intercepción, multa y arresto.
 - El smoke `--vehicle-ownership-smoke` comprueba además daño y reparación al registrar.
 
-La ejecución headless sigue pendiente hasta corregir el Godot portable que muestra
-`.NET assemblies not found`; no se inicia ese ejecutable para evitar ventanas de error.
+La advertencia `.NET assemblies not found` quedó identificada como un efecto del entorno
+restringido de automatización al impedir que Godot cree su carpeta de datos de usuario;
+no faltaban ensamblados en la distribución portable. La ejecución headless real con
+Godot 4.7.2 .NET ya completa el smoke del proyecto correctamente fuera de ese entorno.
 
 ## Próximo incremento recomendado
 
-Reemplazar el protagonista graybox por un **personaje humano provisional riggeado** y una
-máquina de animación para idle, caminar, correr, agacharse, apuntar, cobertura, vault y
-entrada/salida de vehículos. Conviene hacerlo antes de agregar más contenido porque hará
-visibles los problemas de escala, manos, armas y transiciones que la cápsula actual oculta.
+Este incremento fue realizado en la Etapa 18 con un humanoide articulado procedural. El
+siguiente paso es reemplazar sus primitivas por una malla riggeada con `Skeleton3D` y
+animaciones retargeteadas, manteniendo los mismos estados de gameplay.

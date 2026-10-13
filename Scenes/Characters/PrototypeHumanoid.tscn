@@ -1,0 +1,143 @@
+[gd_scene load_steps=16 format=3]
+
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/Characters/HumanoidVisualController.cs" id="1_humanoid"]
+
+[sub_resource type="StandardMaterial3D" id="Material_suit"]
+albedo_color = Color(0.055, 0.075, 0.105, 1)
+roughness = 0.78
+
+[sub_resource type="StandardMaterial3D" id="Material_shirt"]
+albedo_color = Color(0.76, 0.72, 0.61, 1)
+roughness = 0.9
+
+[sub_resource type="StandardMaterial3D" id="Material_skin"]
+albedo_color = Color(0.58, 0.39, 0.28, 1)
+roughness = 0.88
+
+[sub_resource type="StandardMaterial3D" id="Material_pants"]
+albedo_color = Color(0.075, 0.08, 0.09, 1)
+roughness = 0.86
+
+[sub_resource type="StandardMaterial3D" id="Material_leather"]
+albedo_color = Color(0.12, 0.07, 0.035, 1)
+metallic = 0.08
+roughness = 0.58
+
+[sub_resource type="StandardMaterial3D" id="Material_tie"]
+albedo_color = Color(0.38, 0.045, 0.04, 1)
+roughness = 0.72
+
+[sub_resource type="BoxMesh" id="Mesh_torso"]
+material = SubResource("Material_suit")
+size = Vector3(0.72, 0.72, 0.34)
+
+[sub_resource type="BoxMesh" id="Mesh_shirt"]
+material = SubResource("Material_shirt")
+size = Vector3(0.23, 0.58, 0.025)
+
+[sub_resource type="BoxMesh" id="Mesh_tie"]
+material = SubResource("Material_tie")
+size = Vector3(0.07, 0.43, 0.035)
+
+[sub_resource type="CapsuleMesh" id="Mesh_head"]
+material = SubResource("Material_skin")
+radius = 0.22
+height = 0.44
+
+[sub_resource type="CapsuleMesh" id="Mesh_arm"]
+material = SubResource("Material_suit")
+radius = 0.105
+height = 0.7
+
+[sub_resource type="CapsuleMesh" id="Mesh_leg"]
+material = SubResource("Material_pants")
+radius = 0.12
+height = 0.72
+
+[sub_resource type="BoxMesh" id="Mesh_shoe"]
+material = SubResource("Material_leather")
+size = Vector3(0.24, 0.16, 0.38)
+
+[sub_resource type="CylinderMesh" id="Mesh_hat_brim"]
+material = SubResource("Material_leather")
+top_radius = 0.34
+bottom_radius = 0.34
+height = 0.055
+radial_segments = 20
+
+[sub_resource type="CylinderMesh" id="Mesh_hat_crown"]
+material = SubResource("Material_leather")
+top_radius = 0.19
+bottom_radius = 0.23
+height = 0.22
+radial_segments = 20
+
+[node name="PrototypeHumanoid" type="Node3D"]
+script = ExtResource("1_humanoid")
+
+[node name="TorsoPivot" type="Node3D" parent="."]
+
+[node name="Torso" type="MeshInstance3D" parent="TorsoPivot"]
+position = Vector3(0, 0.14, 0)
+mesh = SubResource("Mesh_torso")
+
+[node name="Shirt" type="MeshInstance3D" parent="TorsoPivot"]
+position = Vector3(0, 0.15, 0.183)
+mesh = SubResource("Mesh_shirt")
+
+[node name="Tie" type="MeshInstance3D" parent="TorsoPivot"]
+position = Vector3(0, 0.09, 0.205)
+mesh = SubResource("Mesh_tie")
+
+[node name="Head" type="MeshInstance3D" parent="TorsoPivot"]
+position = Vector3(0, 0.75, 0)
+mesh = SubResource("Mesh_head")
+
+[node name="Nose" type="MeshInstance3D" parent="TorsoPivot"]
+position = Vector3(0, 0.76, 0.22)
+scale = Vector3(0.09, 0.12, 0.1)
+mesh = SubResource("Mesh_head")
+
+[node name="HatBrim" type="MeshInstance3D" parent="TorsoPivot"]
+position = Vector3(0, 1.0, 0)
+mesh = SubResource("Mesh_hat_brim")
+
+[node name="HatCrown" type="MeshInstance3D" parent="TorsoPivot"]
+position = Vector3(0, 1.1, 0)
+mesh = SubResource("Mesh_hat_crown")
+
+[node name="LeftArmPivot" type="Node3D" parent="."]
+position = Vector3(-0.47, 0.42, 0)
+
+[node name="Arm" type="MeshInstance3D" parent="LeftArmPivot"]
+position = Vector3(0, -0.31, 0)
+mesh = SubResource("Mesh_arm")
+
+[node name="RightArmPivot" type="Node3D" parent="."]
+position = Vector3(0.47, 0.42, 0)
+
+[node name="Arm" type="MeshInstance3D" parent="RightArmPivot"]
+position = Vector3(0, -0.31, 0)
+mesh = SubResource("Mesh_arm")
+
+[node name="LeftLegPivot" type="Node3D" parent="."]
+position = Vector3(-0.2, -0.34, 0)
+
+[node name="Leg" type="MeshInstance3D" parent="LeftLegPivot"]
+position = Vector3(0, -0.32, 0)
+mesh = SubResource("Mesh_leg")
+
+[node name="Shoe" type="MeshInstance3D" parent="LeftLegPivot"]
+position = Vector3(0, -0.69, 0.08)
+mesh = SubResource("Mesh_shoe")
+
+[node name="RightLegPivot" type="Node3D" parent="."]
+position = Vector3(0.2, -0.34, 0)
+
+[node name="Leg" type="MeshInstance3D" parent="RightLegPivot"]
+position = Vector3(0, -0.32, 0)
+mesh = SubResource("Mesh_leg")
+
+[node name="Shoe" type="MeshInstance3D" parent="RightLegPivot"]
+position = Vector3(0, -0.69, 0.08)
+mesh = SubResource("Mesh_shoe")

@@ -76,6 +76,12 @@ perder el contacto con la superficie y saltar obstáculos bajos cuando existe un
 aterrizaje seguro. El vault cancela ADS y bloquea el arma hasta recuperar la colisión.
 El graybox incluye tres superficies rotuladas para probar estas reglas.
 
+La cápsula azul del protagonista fue reemplazada por un humanoide provisional articulado
+con traje, corbata y fedora. Una capa de animación procedural ya representa idle,
+caminar, correr, crouch, ADS, cobertura y vault sin alterar la colisión ni los sistemas
+de armas existentes. Sigue siendo una referencia de escala y silueta: el próximo salto
+visual será sustituirlo por una malla riggeada con `Skeleton3D` y clips retargeteados.
+
 El loadout del protagonista está limitado a una pistola y una sola arma larga. La
 escopeta recortada comienza guardada en el vehículo familiar que llega con los
 refuerzos: se retira o devuelve desde su baúl con `E`, conserva su munición y se muestra
@@ -148,3 +154,6 @@ El delito vehicular y la persecución dinámica están detallados en
 
 El daño, las reparaciones y la intercepción policial están detallados en
 [`Documentation/Stage17VehicleDamageAndInterception.md`](Documentation/Stage17VehicleDamageAndInterception.md).
+
+El humanoide provisional y su animación procedural están detallados en
+[`Documentation/Stage18PrototypeHumanoid.md`](Documentation/Stage18PrototypeHumanoid.md).

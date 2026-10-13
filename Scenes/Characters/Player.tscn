@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/Characters/PlayerController.cs" id="1_player"]
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/Interaction/PlayerInteractor.cs" id="2_interactor"]
@@ -10,17 +10,9 @@
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/Characters/PlayerCoverController.cs" id="8_cover"]
 [ext_resource type="Resource" path="res://Resources/Weapons/PrototypeShotgun.tres" id="9_shotgun"]
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/Combat/PlayerWeaponLoadoutController.cs" id="10_loadout"]
+[ext_resource type="PackedScene" path="res://Scenes/Characters/PrototypeHumanoid.tscn" id="11_humanoid"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape_player"]
-radius = 0.35
-height = 1.8
-
-[sub_resource type="StandardMaterial3D" id="Material_player"]
-albedo_color = Color(0.12, 0.3, 0.48, 1)
-roughness = 0.82
-
-[sub_resource type="CapsuleMesh" id="CapsuleMesh_player"]
-material = SubResource("Material_player")
 radius = 0.35
 height = 1.8
 
@@ -50,13 +42,7 @@ shape = SubResource("CapsuleShape_player")
 [node name="Visual" type="Node3D" parent="."]
 position = Vector3(0, 0.9, 0)
 
-[node name="Body" type="MeshInstance3D" parent="Visual"]
-mesh = SubResource("CapsuleMesh_player")
-
-[node name="Facing" type="MeshInstance3D" parent="Visual"]
-position = Vector3(0, 0.15, 0.34)
-scale = Vector3(0.12, 0.12, 0.12)
-mesh = SubResource("CapsuleMesh_player")
+[node name="Humanoid" parent="Visual" instance=ExtResource("11_humanoid")]
 
 [node name="Weapon" type="Node3D" parent="Visual"]
 position = Vector3(0.3, 0.1, 0.28)
