@@ -71,6 +71,13 @@ La cámara isométrica acorta su brazo frente a paredes para evitar clipping. Lo
 y las grandes fachadas que quedan sobre la línea de visión se atenúan gradualmente y
 recuperan su opacidad cuando dejan de tapar al protagonista.
 
+La dirección de `WASD` respeta ahora el frente visual de la cámara (`W` avanza y `S`
+retrocede). Los interiores de los tres negocios ocultan completamente su techo mientras
+el protagonista está dentro, tienen límites físicos en sus salidas y requieren `E` para
+volver a la calle. Si el jugador cae fuera de la geometría, regresa al último punto
+seguro. El rival inicial permanece neutral hasta que comienza la toma de El Faro o el
+jugador lo provoca, evitando combate y policía durante los primeros segundos.
+
 El protagonista puede entrar en cobertura alta o baja, desplazarse lateralmente sin
 perder el contacto con la superficie y saltar obstáculos bajos cuando existe un
 aterrizaje seguro. El vault cancela ADS y bloquea el arma hasta recuperar la colisión.
@@ -157,3 +164,6 @@ El daño, las reparaciones y la intercepción policial están detallados en
 
 El humanoide provisional y su animación procedural están detallados en
 [`Documentation/Stage18PrototypeHumanoid.md`](Documentation/Stage18PrototypeHumanoid.md).
+
+La corrección integral de movimiento, interiores y arranque está detallada en
+[`Documentation/Stage19PlayabilityCorrections.md`](Documentation/Stage19PlayabilityCorrections.md).

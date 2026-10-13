@@ -54,10 +54,10 @@ public sealed partial class IsometricCameraController : Node3D
     public float OcclusionRecoverySharpness { get; set; } = 7.0f;
 
     [Export(PropertyHint.Range, "0,1,0.05")]
-    public float OccluderTransparency { get; set; } = 0.72f;
+    public float OccluderTransparency { get; set; } = 1.0f;
 
     [Export]
-    public float OccluderFadeSpeed { get; set; } = 5.0f;
+    public float OccluderFadeSpeed { get; set; } = 10.0f;
 
     private Node3D? _target;
     private Camera3D? _camera;

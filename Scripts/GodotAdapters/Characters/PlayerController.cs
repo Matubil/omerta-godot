@@ -34,6 +34,9 @@ public sealed partial class PlayerController : CharacterBody3D
     [Export]
     public float CrouchedHeight { get; set; } = 1.2f;
 
+    [Export]
+    public float FallRecoveryHeight { get; set; } = -5.0f;
+
     private PlayerInputAdapter? _input;
     private IsometricCameraController? _cameraRig;
     private Camera3D? _camera;
@@ -51,6 +54,9 @@ public sealed partial class PlayerController : CharacterBody3D
     private DriveableVehicleController? _currentVehicle;
     private uint _standingCollisionLayer;
     private uint _standingCollisionMask;
+    private Vector3 _lastSafePosition;
+    private bool _hasSafePosition;
+    private float _safePositionSampleRemaining;
 
     public bool IsCrouched => _isCrouched;
 
@@ -84,12 +90,18 @@ public sealed partial class PlayerController : CharacterBody3D
         _cover = GetNode<PlayerCoverController>("PlayerCoverController");
         _standingCollisionLayer = CollisionLayer;
         _standingCollisionMask = CollisionMask;
+        RecordSafePosition(GlobalPosition);
         ApplyStanceDimensions();
     }
 
     public override void _PhysicsProcess(double delta)
     {
         ResolveDependencies();
+        if (RecoverFromFallIfNeeded())
+        {
+            return;
+        }
+
         if (_input is null)
         {
             return;
@@ -213,6 +225,7 @@ public sealed partial class PlayerController : CharacterBody3D
         FaceDirection(facingDirection, delta);
 
         MoveAndSlide();
+        UpdateSafePosition(delta);
         _hud?.SetMovementState(_isCrouched, isSprinting, string.Empty);
     }
 
@@ -273,6 +286,20 @@ public sealed partial class PlayerController : CharacterBody3D
 
     public void ForceLeaveCurrentVehicle() => _currentVehicle?.ForceExitDriver();
 
+    public void TeleportTo(Vector3 position)
+    {
+        ForceLeaveCurrentVehicle();
+        _traversal?.ResetTraversal();
+        _cover?.ExitCover();
+        _cameraRig?.SetCover(false, false);
+        GlobalPosition = position;
+        Velocity = Vector3.Zero;
+        RecordSafePosition(position);
+    }
+
+    public Vector3 GetMovementDirectionForDiagnostics(Vector2 input) =>
+        GetCameraRelativeDirection(input);
+
     public bool TryStandForTraversal()
     {
         if (!_isCrouched)
@@ -298,6 +325,7 @@ public sealed partial class PlayerController : CharacterBody3D
         GlobalPosition = position;
         Rotation = rotation;
         Velocity = Vector3.Zero;
+        RecordSafePosition(position);
         _isAiming = false;
         _traversal?.ResetTraversal();
         _cover?.ExitCover();
@@ -326,13 +354,14 @@ public sealed partial class PlayerController : CharacterBody3D
         }
 
         GlobalTransform = new Transform3D(new Basis(rotation.Normalized()), position);
+        RecordSafePosition(position);
     }
 
     private Vector3 GetCameraRelativeDirection(Vector2 input)
     {
         if (_camera is null)
         {
-            return new Vector3(input.X, 0.0f, input.Y).Normalized();
+            return new Vector3(input.X, 0.0f, -input.Y).Normalized();
         }
 
         Vector3 forward = -_camera.GlobalBasis.Z;
@@ -341,8 +370,48 @@ public sealed partial class PlayerController : CharacterBody3D
         Vector3 right = _camera.GlobalBasis.X;
         right.Y = 0.0f;
         right = right.Normalized();
-        Vector3 direction = forward * input.Y + right * input.X;
+        Vector3 direction = forward * -input.Y + right * input.X;
         return direction.LengthSquared() > 1.0f ? direction.Normalized() : direction;
+    }
+
+    private bool RecoverFromFallIfNeeded()
+    {
+        if (!_hasSafePosition || GlobalPosition.Y >= FallRecoveryHeight)
+        {
+            return false;
+        }
+
+        ForceLeaveCurrentVehicle();
+        GlobalPosition = _lastSafePosition + Vector3.Up * 0.1f;
+        Velocity = Vector3.Zero;
+        _traversal?.ResetTraversal();
+        _cover?.ExitCover();
+        _cameraRig?.SetCover(false, false);
+        _hud?.ShowStatus("Regresaste al último punto seguro.");
+        return true;
+    }
+
+    private void UpdateSafePosition(double delta)
+    {
+        _safePositionSampleRemaining -= (float)delta;
+        if (_safePositionSampleRemaining > 0.0f || !IsOnFloor() || IsDriving || IsTraversing)
+        {
+            return;
+        }
+
+        _safePositionSampleRemaining = 0.35f;
+        RecordSafePosition(GlobalPosition);
+    }
+
+    private void RecordSafePosition(Vector3 position)
+    {
+        if (position.Y < FallRecoveryHeight)
+        {
+            return;
+        }
+
+        _lastSafePosition = position;
+        _hasSafePosition = true;
     }
 
     private bool TrySetCrouched(bool crouched)

@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using Godot;
+using Omerta.Domain.Combat.AI;
 using Omerta.Domain.Missions;
+using Omerta.GodotAdapters.AI;
 using Omerta.GodotAdapters.Businesses;
 using Omerta.GodotAdapters.Camera;
 using Omerta.GodotAdapters.Characters;
@@ -14,6 +16,7 @@ using Omerta.GodotAdapters.Territories;
 using Omerta.GodotAdapters.Interaction;
 using Omerta.Domain.Combat.Weapons;
 using Omerta.GodotAdapters.Vehicles;
+using Omerta.GodotAdapters.World;
 using Omerta.Presentation;
 
 namespace Omerta.GodotAdapters.Diagnostics;
@@ -49,6 +52,10 @@ public sealed partial class PlaytestDiagnosticsController : Node
     private bool _runDefenseMissionSmokeTest;
     private bool _runWeaponLoadoutSmokeTest;
     private bool _runVehicleOwnershipSmokeTest;
+    private bool _runPlayabilitySmokeTest;
+    private int _playabilitySmokeStage;
+    private int _playabilityWaitFrames = 30;
+    private Vector3 _playabilitySafePosition;
     private int _barSabotageSmokeStage;
     private int _barSabotageWaitFrames = 120;
     private int _barBalanceBeforeSabotage;
@@ -121,6 +128,10 @@ public sealed partial class PlaytestDiagnosticsController : Node
                 _runVehicleOwnershipSmokeTest = true;
                 _smokeFramesRemaining = 120;
             }
+            else if (argument == "--playability-smoke")
+            {
+                _runPlayabilitySmokeTest = true;
+            }
         }
     }
 
@@ -185,6 +196,10 @@ public sealed partial class PlaytestDiagnosticsController : Node
         {
             _runVehicleOwnershipSmokeTest = false;
             RunVehicleOwnershipSmokeTest();
+        }
+        else if (_runPlayabilitySmokeTest)
+        {
+            AdvancePlayabilitySmokeTest();
         }
     }
 
@@ -397,6 +412,107 @@ public sealed partial class PlaytestDiagnosticsController : Node
         {
             GetTree().Quit(exitCode);
         }
+    }
+
+    private void AdvancePlayabilitySmokeTest()
+    {
+        try
+        {
+            ResolveDependencies();
+            Require(_player is not null, "player for playability smoke");
+            Require(_camera?.Camera is not null, "camera for movement orientation");
+            Require(_workshop is not null, "El Faro for interior validation");
+            Require(_bar is not null, "La Niebla for interior validation");
+            Require(_depot is not null, "San Telmo for interior validation");
+
+            if (--_playabilityWaitFrames > 0)
+            {
+                return;
+            }
+
+            if (_playabilitySmokeStage == 0)
+            {
+                Vector3 cameraForward = -_camera!.Camera!.GlobalBasis.Z;
+                cameraForward.Y = 0.0f;
+                cameraForward = cameraForward.Normalized();
+                Vector3 wDirection = _player!.GetMovementDirectionForDiagnostics(
+                    new Vector2(0.0f, -1.0f));
+                Require(wDirection.Dot(cameraForward) >= 0.99f, "W moves toward camera forward");
+
+                RivalController? rival = GetTree().GetFirstNodeInGroup("rival") as RivalController;
+                Require(rival is not null, "initial rival");
+                Require(rival!.Awareness == EnemyAwareness.Unaware && !rival.IsTargetVisible,
+                    "rival stays neutral before the mission starts");
+
+                ValidateInteriorSafety(_workshop!, 5.0f);
+                ValidateInteriorSafety(_bar!, 4.0f);
+                ValidateInteriorSafety(_depot!, 4.0f);
+
+                _workshop!.GetNode<PortalInteraction>("Exterior/Entrance").Interact();
+                _playabilitySmokeStage = 1;
+                _playabilityWaitFrames = 4;
+                return;
+            }
+
+            InteriorVisibilityController workshopInterior =
+                _workshop!.GetNode<InteriorVisibilityController>("Interior");
+            workshopInterior.RefreshVisibility();
+            if (_playabilitySmokeStage == 1)
+            {
+                Require(workshopInterior.IsPlayerInside, "player recognized inside El Faro");
+                Require(!workshopInterior.GetNode<Node3D>("Roof").Visible,
+                    "interior roof hidden while inside");
+                _workshop.GetNode<PortalInteraction>("Interior/Exit").Interact();
+                _playabilitySmokeStage = 2;
+                _playabilityWaitFrames = 4;
+                return;
+            }
+
+            if (_playabilitySmokeStage == 2)
+            {
+                Require(!workshopInterior.IsPlayerInside, "player recognized outside El Faro");
+                Require(workshopInterior.GetNode<Node3D>("Roof").Visible,
+                    "interior roof restored after exiting");
+                _playabilitySafePosition = new Vector3(0.0f, 0.25f, 4.0f);
+                _player!.TeleportTo(_playabilitySafePosition);
+                _player.GlobalPosition = new Vector3(0.0f, -10.0f, 4.0f);
+                _playabilitySmokeStage = 3;
+                _playabilityWaitFrames = 4;
+                return;
+            }
+
+            Require(_player!.GlobalPosition.Y > _player.FallRecoveryHeight,
+                "fall recovery returns above the kill plane");
+            Vector2 recoveredOffset = new(
+                _player.GlobalPosition.X - _playabilitySafePosition.X,
+                _player.GlobalPosition.Z - _playabilitySafePosition.Z);
+            Require(recoveredOffset.Length() <= 0.25f, "fall recovery uses last safe position");
+
+            GD.Print(
+                "Playability smoke passed: W/S orientation, three sealed interiors, " +
+                "roof visibility, E portal round-trip and fall recovery verified.");
+            _runPlayabilitySmokeTest = false;
+            GetTree().Quit(0);
+        }
+        catch (Exception exception)
+        {
+            _runPlayabilitySmokeTest = false;
+            GD.PushError($"Playability smoke failed: {exception}");
+            GetTree().Quit(1);
+        }
+    }
+
+    private static void ValidateInteriorSafety(Node business, float expectedHalfWidth)
+    {
+        InteriorVisibilityController interior =
+            business.GetNode<InteriorVisibilityController>("Interior");
+        Require(Mathf.IsEqualApprox(interior.HalfWidth, expectedHalfWidth),
+            $"{business.Name} interior width");
+        CollisionShape3D boundary = interior.GetNode<CollisionShape3D>("ExitBoundary/Collision");
+        Require(!boundary.Disabled && boundary.Shape is BoxShape3D,
+            $"{business.Name} sealed exit boundary");
+        Require(interior.GetNodeOrNull<PortalInteraction>("Exit") is not null,
+            $"{business.Name} E exit portal");
     }
 
     private void RunNavigationSmokeTest()

@@ -159,6 +159,7 @@ theme_override_colors/font_color = Color(1, 0.45, 0.36, 1)
 theme_override_font_sizes/font_size = 16
 text = "RIVAL  100/100 · SIN ALERTA"
 horizontal_alignment = 2
+visible = false
 
 [node name="PoliceState" type="Label" parent="."]
 anchors_preset = 10

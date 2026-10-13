@@ -27,8 +27,7 @@ public sealed partial class PortalInteraction : Area3D, IInteractable
             return;
         }
 
-        player.GlobalPosition = Destination;
-        player.Velocity = Vector3.Zero;
+        player.TeleportTo(Destination);
         if (!string.IsNullOrWhiteSpace(ArrivalMessage))
         {
             (GetTree().GetFirstNodeInGroup("hud") as HudController)?.ShowStatus(ArrivalMessage);

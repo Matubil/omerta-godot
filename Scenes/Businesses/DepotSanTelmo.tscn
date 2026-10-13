@@ -1,4 +1,4 @@
-[gd_scene load_steps=23 format=3]
+[gd_scene load_steps=24 format=3]
 
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/Interaction/MerchantInteraction.cs" id="1_merchant"]
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/Interaction/PortalInteraction.cs" id="2_portal"]
@@ -8,6 +8,7 @@
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/Combat/Combatant.cs" id="6_combatant"]
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/Interaction/BusinessOperationsInteraction.cs" id="7_operations"]
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/Businesses/PressurePropController.cs" id="8_pressure_prop"]
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/World/InteriorVisibilityController.cs" id="9_interior"]
 
 [sub_resource type="StandardMaterial3D" id="WallMaterial"]
 albedo_color = Color(0.31, 0.32, 0.3, 1)
@@ -185,6 +186,8 @@ shape = SubResource("InteractionShape")
 
 [node name="Interior" type="Node3D" parent="."]
 position = Vector3(110, 0, 0)
+script = ExtResource("9_interior")
+HalfWidth = 4.0
 
 [node name="Floor" type="StaticBody3D" parent="Interior"]
 position = Vector3(0, 0.1, 0)
@@ -228,6 +231,15 @@ collision_layer = 5
 mesh = SubResource("UnitWallMesh")
 
 [node name="Collision" type="CollisionShape3D" parent="Interior/RightWall"]
+shape = SubResource("UnitBoxShape")
+
+[node name="ExitBoundary" type="StaticBody3D" parent="Interior"]
+position = Vector3(0, 1.5, 5)
+scale = Vector3(8, 3, 0.35)
+collision_layer = 5
+collision_mask = 1
+
+[node name="Collision" type="CollisionShape3D" parent="Interior/ExitBoundary"]
 shape = SubResource("UnitBoxShape")
 
 [node name="Roof" type="StaticBody3D" parent="Interior" groups=["camera_fade_occluder"]]

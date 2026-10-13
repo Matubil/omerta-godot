@@ -1,8 +1,10 @@
 using Godot;
 using Omerta.Domain.Combat.AI;
 using Omerta.Domain.Combat.Damage;
+using Omerta.Domain.Missions;
 using Omerta.GodotAdapters.Combat;
 using Omerta.GodotAdapters.Navigation;
+using Omerta.GodotAdapters.StageFive;
 using Omerta.Presentation;
 
 namespace Omerta.GodotAdapters.AI;
@@ -41,11 +43,13 @@ public sealed partial class RivalController : CharacterBody3D
     private HudController? _hud;
     private NavigationAgent3D? _navigation;
     private NavigationAvoidanceMotor? _avoidance;
+    private StageFiveController? _stage;
     private Vector3 _lastKnownPosition;
     private bool _hasLastKnownPosition;
     private double _nextDecisionTime;
     private Vector3 _spawnPosition;
     private Vector3 _spawnRotation;
+    private bool _wasProvoked;
 
     public EnemyAwareness Awareness => _perception.Awareness;
 
@@ -81,6 +85,7 @@ public sealed partial class RivalController : CharacterBody3D
     public override void _PhysicsProcess(double delta)
     {
         _target ??= (GetTree().GetFirstNodeInGroup("player") as Node)?.GetNodeOrNull<Combatant>("Combatant");
+        _stage ??= GetTree().GetFirstNodeInGroup("stage_five") as StageFiveController;
         _hud ??= GetTree().GetFirstNodeInGroup("hud") as HudController;
         if (_combatant is null || _target is null || _weapon is null)
         {
@@ -92,6 +97,25 @@ public sealed partial class RivalController : CharacterBody3D
             _avoidance?.ResolveVelocity(Vector3.Zero);
             Velocity = Vector3.Zero;
             UpdateHud();
+            return;
+        }
+
+        bool missionCombatActive = _stage?.MissionStatus is
+            PropertyTakeoverMissionStatus.TakeControl or
+            PropertyTakeoverMissionStatus.ResolvePoliceResponse;
+        if (!missionCombatActive && !_wasProvoked)
+        {
+            _perception.Reset();
+            _hasLastKnownPosition = false;
+            IsTargetVisible = false;
+            _avoidance?.ResolveVelocity(Vector3.Zero);
+            Vector3 idleVelocity = Velocity;
+            idleVelocity.X = 0.0f;
+            idleVelocity.Z = 0.0f;
+            idleVelocity.Y = IsOnFloor() ? -0.5f : idleVelocity.Y - Gravity * (float)delta;
+            Velocity = idleVelocity;
+            MoveAndSlide();
+            _hud?.SetEnemyVisible(false);
             return;
         }
 
@@ -154,6 +178,7 @@ public sealed partial class RivalController : CharacterBody3D
         _perception.Reset();
         _hasLastKnownPosition = false;
         IsTargetVisible = false;
+        _wasProvoked = false;
         _nextDecisionTime = 0;
         if (_navigation is not null)
         {
@@ -234,7 +259,11 @@ public sealed partial class RivalController : CharacterBody3D
         _weapon.TryFire(targetPoint - _weapon.FireOriginPosition, true);
     }
 
-    private void OnDamaged(DamageInfo damage) => _perception.ForceAlert();
+    private void OnDamaged(DamageInfo damage)
+    {
+        _wasProvoked = true;
+        _perception.ForceAlert();
+    }
 
     private void OnDefeated(DamageInfo damage)
     {

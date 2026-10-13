@@ -1,9 +1,10 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/Businesses/BarLaNieblaController.cs" id="1_bar"]
 [ext_resource type="Resource" path="res://Resources/Businesses/BarLaNiebla.tres" id="2_definition"]
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/Interaction/PortalInteraction.cs" id="3_portal"]
 [ext_resource type="Script" path="res://Scripts/GodotAdapters/Interaction/BusinessOperationsInteraction.cs" id="4_operations"]
+[ext_resource type="Script" path="res://Scripts/GodotAdapters/World/InteriorVisibilityController.cs" id="5_interior"]
 
 [sub_resource type="StandardMaterial3D" id="WallMaterial"]
 albedo_color = Color(0.22, 0.16, 0.29, 1)
@@ -157,6 +158,8 @@ shape = SubResource("InteractionShape")
 
 [node name="Interior" type="Node3D" parent="."]
 position = Vector3(80, 0, 0)
+script = ExtResource("5_interior")
+HalfWidth = 4.0
 
 [node name="Floor" type="StaticBody3D" parent="Interior"]
 position = Vector3(0, 0.1, 0)
@@ -200,6 +203,15 @@ collision_layer = 5
 mesh = SubResource("WallMesh")
 
 [node name="Collision" type="CollisionShape3D" parent="Interior/RightWall"]
+shape = SubResource("UnitBoxShape")
+
+[node name="ExitBoundary" type="StaticBody3D" parent="Interior"]
+position = Vector3(0, 1.5, 5)
+scale = Vector3(8, 3, 0.35)
+collision_layer = 5
+collision_mask = 1
+
+[node name="Collision" type="CollisionShape3D" parent="Interior/ExitBoundary"]
 shape = SubResource("UnitBoxShape")
 
 [node name="Roof" type="StaticBody3D" parent="Interior" groups=["camera_fade_occluder"]]

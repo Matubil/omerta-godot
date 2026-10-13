@@ -169,6 +169,7 @@ public sealed partial class HudController : CanvasLayer
             return;
         }
 
+        _enemyLabel.Visible = true;
         string state = awareness switch
         {
             EnemyAwareness.Alert => "ALERTA",
@@ -176,6 +177,14 @@ public sealed partial class HudController : CanvasLayer
             _ => "SIN ALERTA"
         };
         _enemyLabel.Text = $"RIVAL  {current}/{maximum} · {state}";
+    }
+
+    public void SetEnemyVisible(bool visible)
+    {
+        if (_enemyLabel is not null)
+        {
+            _enemyLabel.Visible = visible;
+        }
     }
 
     public void SetMission(string objective, string status)
