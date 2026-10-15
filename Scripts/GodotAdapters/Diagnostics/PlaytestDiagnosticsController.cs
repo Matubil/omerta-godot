@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Godot;
 using Omerta.Domain.Combat.AI;
+using Omerta.Domain.Law;
 using Omerta.Domain.Missions;
 using Omerta.GodotAdapters.AI;
 using Omerta.GodotAdapters.Businesses;
@@ -11,6 +12,7 @@ using Omerta.GodotAdapters.Combat;
 using Omerta.GodotAdapters.Economy;
 using Omerta.GodotAdapters.Missions;
 using Omerta.GodotAdapters.Navigation;
+using Omerta.GodotAdapters.Persistence;
 using Omerta.GodotAdapters.StageFive;
 using Omerta.GodotAdapters.Territories;
 using Omerta.GodotAdapters.Interaction;
@@ -35,6 +37,7 @@ public sealed partial class PlaytestDiagnosticsController : Node
     private TerritoryController? _territory;
     private SabotageMissionController? _sabotageMission;
     private EconomyController? _economy;
+    private PersistenceController? _persistence;
     private HitscanWeaponController? _weapon;
     private PlayerWeaponLoadoutController? _weaponLoadout;
     private VehicleArsenalInteraction? _vehicleArsenal;
@@ -53,6 +56,10 @@ public sealed partial class PlaytestDiagnosticsController : Node
     private bool _runWeaponLoadoutSmokeTest;
     private bool _runVehicleOwnershipSmokeTest;
     private bool _runPlayabilitySmokeTest;
+    private bool _runVerticalSliceSmokeTest;
+    private int _verticalSliceSmokeStage;
+    private int _verticalSliceWaitFrames = 5;
+    private int _verticalSliceBalanceBeforeTakeover;
     private int _playabilitySmokeStage;
     private int _playabilityWaitFrames = 30;
     private Vector3 _playabilitySafePosition;
@@ -132,6 +139,10 @@ public sealed partial class PlaytestDiagnosticsController : Node
             {
                 _runPlayabilitySmokeTest = true;
             }
+            else if (argument == "--vertical-slice-smoke")
+            {
+                _runVerticalSliceSmokeTest = true;
+            }
         }
     }
 
@@ -201,6 +212,10 @@ public sealed partial class PlaytestDiagnosticsController : Node
         {
             AdvancePlayabilitySmokeTest();
         }
+        else if (_runVerticalSliceSmokeTest)
+        {
+            AdvanceVerticalSliceSmokeTest();
+        }
     }
 
     private void ResolveDependencies()
@@ -215,6 +230,7 @@ public sealed partial class PlaytestDiagnosticsController : Node
         _territory ??= GetTree().GetFirstNodeInGroup("territory") as TerritoryController;
         _sabotageMission ??= GetTree().GetFirstNodeInGroup("sabotage_mission") as SabotageMissionController;
         _economy ??= GetTree().GetFirstNodeInGroup("economy") as EconomyController;
+        _persistence ??= GetTree().GetFirstNodeInGroup("persistence") as PersistenceController;
         _weapon ??= _player?.GetNodeOrNull<HitscanWeaponController>("WeaponController");
         _weaponLoadout ??= _player?.GetNodeOrNull<PlayerWeaponLoadoutController>("WeaponLoadout");
         Node3D? familyVehicle = GetTree().GetFirstNodeInGroup("family_vehicle") as Node3D;
@@ -498,6 +514,150 @@ public sealed partial class PlaytestDiagnosticsController : Node
         {
             _runPlayabilitySmokeTest = false;
             GD.PushError($"Playability smoke failed: {exception}");
+            GetTree().Quit(1);
+        }
+    }
+
+    private void AdvanceVerticalSliceSmokeTest()
+    {
+        try
+        {
+            ResolveDependencies();
+            Require(_player is not null, "player for vertical slice");
+            Require(_stage is not null, "mission and police controller");
+            Require(_workshop is not null, "El Faro business");
+            Require(_economy is not null, "economy for rewards and bribe");
+            Require(_weapon is not null, "player sidearm");
+            Require(_weaponLoadout is not null, "player weapon loadout");
+            Require(_stolenVehicle is not null, "driveable street car");
+            Require(_persistence is not null, "persistence controller");
+
+            if (--_verticalSliceWaitFrames > 0)
+            {
+                return;
+            }
+
+            if (_verticalSliceSmokeStage == 0)
+            {
+                _economy!.ResetEconomy();
+                _workshop!.ResetBusinessEncounter();
+                _stage!.ResetStageFiveEncounter();
+                _weaponLoadout!.ResetLoadout();
+                _player!.ResetForEncounter(new Vector3(0.0f, 0.05f, 4.0f), Vector3.Zero);
+
+                _stage.StartMission();
+                Require(_stage.MissionStatus == PropertyTakeoverMissionStatus.ReachProperty,
+                    "first mission accepted");
+                _player.TeleportTo(_stage.MissionArrivalPoint);
+                _verticalSliceSmokeStage = 1;
+                _verticalSliceWaitFrames = 5;
+                return;
+            }
+
+            if (_verticalSliceSmokeStage == 1)
+            {
+                Require(_stage!.MissionStatus == PropertyTakeoverMissionStatus.TakeControl,
+                    "arrival advances the first mission");
+
+                Node3D witness = _stage.GetNode<Node3D>("Witness");
+                _player!.TeleportTo(witness.GlobalPosition + Vector3.Left * 2.0f);
+                _weaponLoadout!.ResetLoadout();
+                Require(_weaponLoadout.TryEquipSidearm(), "sidearm equipped before reported shot");
+                Require(_weapon!.TryFire(Vector3.Forward, false), "player fires near witness");
+                Require(_stage.PoliceStatus == PoliceResponseStatus.Dispatching,
+                    "witness starts police dispatch");
+
+                _verticalSliceBalanceBeforeTakeover = _economy!.Economy.Balance;
+                for (int attempt = 0; attempt < 4; attempt++)
+                {
+                    _workshop!.InteractWithMerchant();
+                }
+
+                Require(_workshop!.Business.OwnerId == WorkshopController.PlayerFactionId,
+                    "El Faro captured through normal pressure interactions");
+                Require(_stage.MissionStatus == PropertyTakeoverMissionStatus.ResolvePoliceResponse,
+                    "captured property waits for active police response");
+                _stage.AdvancePoliceForDiagnostics(_stage.PoliceDispatchDelay);
+                Require(_stage.PoliceStatus == PoliceResponseStatus.EnRoute,
+                    "dispatch advances to police travel");
+                for (int step = 0;
+                     step < 32 && _stage.PoliceStatus == PoliceResponseStatus.EnRoute;
+                     step++)
+                {
+                    _stage.AdvancePoliceForDiagnostics(1.0f);
+                }
+                Require(_stage.PoliceStatus == PoliceResponseStatus.Responding,
+                    "patrol arrives and activates the officer");
+            }
+
+            _stage!.TryBribePolice();
+            Require(_stage.PoliceStatus == PoliceResponseStatus.Bribed,
+                "low-level police response resolved by bribe");
+            Require(_stage.MissionStatus == PropertyTakeoverMissionStatus.Completed,
+                "first mission completes after police resolution");
+            Require(
+                _economy!.Economy.Balance == _verticalSliceBalanceBeforeTakeover -
+                    _stage.PoliceBribeCost +
+                    _stage.MissionReward,
+                "bribe cost and takeover reward applied exactly once");
+
+            Require(_stage.DefenseMissionStatus == BusinessDefenseMissionStatus.Warning,
+                "takeover schedules the defense warning");
+            _stage.AdvanceDefenseForDiagnostics(_stage.CounterattackWarningDuration);
+            Require(_stage.DefenseMissionStatus == BusinessDefenseMissionStatus.Defending,
+                "warning advances into active defense");
+            Require(_stage.DefeatCounterattackerForDiagnostics(0),
+                "first counterattacker defeated");
+            Require(_stage.DefeatCounterattackerForDiagnostics(1),
+                "second counterattacker defeated");
+            Require(_stage.DefenseMissionStatus == BusinessDefenseMissionStatus.Succeeded,
+                "reprisal defense succeeds");
+            Require(
+                _economy.Economy.Balance == _verticalSliceBalanceBeforeTakeover -
+                    _stage.PoliceBribeCost +
+                    _stage.MissionReward + _stage.DefenseMissionReward,
+                "defense reward applied exactly once");
+
+            _player!.TeleportTo(_stolenVehicle!.GlobalPosition + Vector3.Left * 2.0f);
+            Require(_stolenVehicle.TryEnterDriver(_player), "player enters the street car");
+            Require(_player.IsDriving && _stolenVehicle.IsDriven,
+                "vehicle and player share driver state");
+            Require(_stage.EscapeVehiclePursuitForDiagnostics(),
+                "reported vehicle theft can be escaped");
+            _stolenVehicle.ForceExitDriver();
+            Require(!_player.IsDriving && !_stolenVehicle.IsDriven,
+                "player exits the street car");
+
+            var snapshot = _persistence!.CaptureCurrentState();
+            Vector3 savedPosition = _player.GlobalPosition;
+            int savedBalance = _economy.Economy.Balance;
+            _economy.RestoreBalance(0);
+            _workshop!.ResetBusinessEncounter();
+            _player.TeleportTo(new Vector3(-8.0f, 0.05f, 7.0f));
+            _persistence.RestoreFromData(snapshot);
+
+            Require(_economy.Economy.Balance == savedBalance,
+                "economy restored from vertical-slice snapshot");
+            Require(_workshop.Business.OwnerId == WorkshopController.PlayerFactionId,
+                "El Faro ownership restored from snapshot");
+            Require(_stage.MissionStatus == PropertyTakeoverMissionStatus.Completed,
+                "takeover mission restored as completed");
+            Require(_stage.DefenseMissionStatus == BusinessDefenseMissionStatus.Succeeded,
+                "defense mission restored as succeeded");
+            Require(_player.GlobalPosition.DistanceTo(savedPosition) <= 0.05f,
+                "player pose restored from snapshot");
+
+            GD.Print(
+                "Vertical slice smoke passed: mission acceptance, arrival, El Faro takeover, " +
+                "witnessed crime, police bribe, reprisal defense, vehicle enter/exit and " +
+                "persistence restore verified in one continuous run.");
+            _runVerticalSliceSmokeTest = false;
+            GetTree().Quit(0);
+        }
+        catch (Exception exception)
+        {
+            _runVerticalSliceSmokeTest = false;
+            GD.PushError($"Vertical slice smoke failed: {exception}");
             GetTree().Quit(1);
         }
     }

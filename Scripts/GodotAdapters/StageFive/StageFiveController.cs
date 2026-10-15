@@ -540,6 +540,8 @@ public sealed partial class StageFiveController : Node3D
     public void AdvanceDefenseForDiagnostics(float seconds) =>
         _counterattack?.Advance(seconds);
 
+    public void AdvancePoliceForDiagnostics(float seconds) => AdvancePolice(seconds);
+
     public bool DefeatCounterattackerForDiagnostics(int index)
     {
         bool defeated = _counterattack?.SetAttackerDefeated(index) == true;

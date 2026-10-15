@@ -167,3 +167,6 @@ El humanoide provisional y su animación procedural están detallados en
 
 La corrección integral de movimiento, interiores y arranque está detallada en
 [`Documentation/Stage19PlayabilityCorrections.md`](Documentation/Stage19PlayabilityCorrections.md).
+
+La estabilización automatizada del recorrido encadenado está detallada en
+[`Documentation/Stage20VerticalSliceStabilization.md`](Documentation/Stage20VerticalSliceStabilization.md).
