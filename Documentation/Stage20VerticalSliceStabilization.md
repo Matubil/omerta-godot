@@ -30,17 +30,30 @@ diagnóstico añadido solamente permite adelantar tiempo de forma determinista e
 Godot_v4.7.2-stable_mono_win64_console.exe --headless --path . -- --vertical-slice-smoke
 ```
 
+La persistencia entre cierres reales se comprueba con dos procesos independientes y un
+slot aislado de `save_0.json`:
+
+```powershell
+Godot_v4.7.2-stable_mono_win64_console.exe --headless --path . -- --persistence-restart-write-smoke
+Godot_v4.7.2-stable_mono_win64_console.exe --headless --path . -- --persistence-restart-read-smoke
+```
+
+La primera ejecución guarda un estado determinista y termina. La segunda inicia el juego
+desde cero, carga ese archivo, compara todos los datos restaurados y elimina el slot de prueba.
+
 ## Validación de regresión
 
 - Compilación completa: 0 errores, 0 advertencias.
 - Pruebas de dominio: 58/58 correctas.
-- Smokes de integración: 13/13 correctos.
-- El smoke de persistencia continúa usando un slot aislado.
+- Smokes de integración existentes: 13/13 correctos.
+- Persistencia entre procesos: 2/2 fases correctas (escritura y lectura tras reinicio).
+- Los smokes de persistencia usan slots aislados y nunca leen ni sobrescriben `save_0.json`.
 - `SaveGameData.CurrentVersion` permanece en 7.
 
 ## Pendiente manual
 
 Antes de declarar finalizada la estabilización hay que completar una partida interactiva:
 inicio, movimiento, encargo, conquista, policía, interiores, vehículo, represalia,
-guardado, cierre real de Godot, nueva ejecución y carga. Los smokes verifican estados e
-integraciones, pero no sustituyen la evaluación humana de controles, cámara y legibilidad.
+guardado y carga mediante F5/F9. El cierre real, nueva ejecución y restauración exacta ya
+quedan cubiertos automáticamente; los smokes no sustituyen la evaluación humana de controles,
+cámara y legibilidad.

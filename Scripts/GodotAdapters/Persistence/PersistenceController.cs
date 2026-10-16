@@ -21,6 +21,9 @@ namespace Omerta.GodotAdapters.Persistence;
 
 public sealed partial class PersistenceController : Node
 {
+    private const string PersistenceSmokeSlotFileName = "save_persistence_smoke.json";
+    private const string RestartSmokeSlotFileName = "save_persistence_restart_smoke.json";
+
     [Export]
     public string SlotFileName { get; set; } = LocalSaveGameStorage.DefaultSlotFileName;
 
@@ -43,6 +46,8 @@ public sealed partial class PersistenceController : Node
     private SabotageMissionController? _sabotageMission;
     private bool _recoveryScheduled;
     private bool _runSmokeTest;
+    private bool _runRestartWriteSmokeTest;
+    private bool _runRestartReadSmokeTest;
     private readonly List<DriveableVehicleController> _persistentVehicles = new();
 
     public bool HasSave => _storage?.Exists == true;
@@ -82,7 +87,21 @@ public sealed partial class PersistenceController : Node
             if (argument == "--persistence-smoke")
             {
                 _runSmokeTest = true;
-                SlotFileName = "save_persistence_smoke.json";
+                SlotFileName = PersistenceSmokeSlotFileName;
+                break;
+            }
+
+            if (argument == "--persistence-restart-write-smoke")
+            {
+                _runRestartWriteSmokeTest = true;
+                SlotFileName = RestartSmokeSlotFileName;
+                break;
+            }
+
+            if (argument == "--persistence-restart-read-smoke")
+            {
+                _runRestartReadSmokeTest = true;
+                SlotFileName = RestartSmokeSlotFileName;
                 break;
             }
         }
@@ -94,6 +113,14 @@ public sealed partial class PersistenceController : Node
         if (_runSmokeTest)
         {
             Callable.From(RunPersistenceSmokeTest).CallDeferred();
+        }
+        else if (_runRestartWriteSmokeTest)
+        {
+            Callable.From(RunPersistenceRestartWriteSmokeTest).CallDeferred();
+        }
+        else if (_runRestartReadSmokeTest)
+        {
+            Callable.From(RunPersistenceRestartReadSmokeTest).CallDeferred();
         }
     }
 
@@ -459,6 +486,125 @@ public sealed partial class PersistenceController : Node
             }
 
             GetTree().Quit(exitCode);
+        }
+    }
+
+    private void RunPersistenceRestartWriteSmokeTest()
+    {
+        int exitCode = 1;
+        try
+        {
+            DeleteSmokeFiles();
+            _economy!.RestoreBalance(432);
+            _player!.RestorePersistentPose(
+                new Vector3(7.0f, 0.25f, 9.0f),
+                Quaternion.Identity);
+            _playerCombat!.RestoreCombat(
+                73,
+                3,
+                21,
+                4,
+                18,
+                true,
+                PlayerWeaponLoadoutController.ShotgunId,
+                true);
+            if (_persistentVehicles.Count > 0)
+            {
+                _persistentVehicles[0].RestorePersistentState(
+                    new Vector3(12.0f, 0.5f, -8.0f),
+                    Quaternion.Identity,
+                    true);
+            }
+
+            if (!SaveNow())
+            {
+                throw new InvalidOperationException("The restart smoke save operation failed.");
+            }
+
+            SaveGameData persisted = _serializer.Deserialize(_storage!.Read());
+            if (persisted.Version != SaveGameData.CurrentVersion ||
+                persisted.Economy.Balance != 432)
+            {
+                throw new InvalidOperationException(
+                    "The restart smoke fixture was not persisted as expected.");
+            }
+
+            GD.Print(
+                "Persistence restart write smoke passed: isolated save created for a new process.");
+            exitCode = 0;
+        }
+        catch (Exception exception)
+        {
+            GD.PushError($"Persistence restart write smoke failed: {exception}");
+            DeleteSmokeFiles();
+        }
+        finally
+        {
+            GetTree().Quit(exitCode);
+        }
+    }
+
+    private void RunPersistenceRestartReadSmokeTest()
+    {
+        int exitCode = 1;
+        try
+        {
+            if (_storage?.Exists != true)
+            {
+                throw new FileNotFoundException(
+                    "The restart smoke save created by the previous process is missing.",
+                    _storage?.FilePath);
+            }
+
+            string expectedJson = _storage.Read();
+            SaveGameData expected = _serializer.Deserialize(expectedJson);
+            if (expected.Version != SaveGameData.CurrentVersion || expected.Economy.Balance != 432)
+            {
+                throw new InvalidOperationException("The restart smoke fixture is not the expected save.");
+            }
+
+            if (!LoadNow())
+            {
+                throw new InvalidOperationException("The restart smoke load operation failed.");
+            }
+
+            string actualJson = _serializer.Serialize(CaptureCurrentState());
+            if (actualJson != expectedJson)
+            {
+                throw new InvalidOperationException(
+                    "The state restored by the new process differs from the persisted state.");
+            }
+
+            GD.Print(
+                "Persistence restart read smoke passed: a new process restored the exact saved state.");
+            exitCode = 0;
+        }
+        catch (Exception exception)
+        {
+            GD.PushError($"Persistence restart read smoke failed: {exception}");
+        }
+        finally
+        {
+            DeleteSmokeFiles();
+            GetTree().Quit(exitCode);
+        }
+    }
+
+    private void DeleteSmokeFiles()
+    {
+        if (_storage is null)
+        {
+            return;
+        }
+
+        if (File.Exists(_storage.FilePath))
+        {
+            File.Delete(_storage.FilePath);
+        }
+
+        if (File.Exists(_storage.TemporaryFilePath))
+        {
+            File.Delete(_storage.TemporaryFilePath);
         }
     }
 
